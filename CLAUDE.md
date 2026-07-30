@@ -3,8 +3,10 @@
 Death-aware Best Possible Time: a LiveSplit layout component for SMW kaizo
 that computes what finish time is *actually* still possible given where death
 left you. Start here: `docs/superpowers/specs/2026-07-30-death-aware-bpt-design.md`
-is the approved design spec. Next step is an implementation plan from that
-spec (superpowers writing-plans), then subagent-driven execution.
+is the approved design spec. v1 is implemented; the plan (with a final-review
+"Amendments" section documenting three deliberate deviations from the spec's
+literal formulas) is `docs/superpowers/plans/2026-07-30-death-aware-bpt.md`,
+and the live-testing guide is `docs/TESTING.md`.
 
 ## Sibling repos (read-only reference — never edit from here)
 

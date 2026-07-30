@@ -22,11 +22,7 @@ public sealed class SegmentTracker
 
     public void StartSegment(TimeSpan elapsed)
     {
-        open.Clear();
-        CurrentMarker = 0;
-        CurrentVariant = Variant.Hot;
-        DiedThisSegment = false;
-        IsActive = true;
+        ResetState(active: true);
         open[(0, Variant.Hot)] = elapsed;
     }
 
@@ -64,26 +60,21 @@ public sealed class SegmentTracker
         return result;
     }
 
-    public void Discard()
-    {
-        open.Clear();
-        CurrentMarker = 0;
-        CurrentVariant = Variant.Hot;
-        DiedThisSegment = false;
-        IsActive = false;
-    }
+    public void Discard() => ResetState(active: false);
 
     /// <summary>Resume tracking after undo/skip: the segment is mid-flight and its
     /// true start time is unknowable, so no marker-0 observation is opened —
     /// only genuinely anchored arrivals (checkpoint touches, respawns) from here
     /// on may record for this segment.</summary>
-    public void ResumeSegmentUnanchored()
+    public void ResumeSegmentUnanchored() => ResetState(active: true);
+
+    private void ResetState(bool active)
     {
         open.Clear();
         CurrentMarker = 0;
         CurrentVariant = Variant.Hot;
         DiedThisSegment = false;
-        IsActive = true;
+        IsActive = active;
     }
 
     /// <summary>Run-elapsed at which the current (marker, variant) situation was

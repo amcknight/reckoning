@@ -20,14 +20,25 @@ Reckoning draws two rows in your layout:
 - **Reckoning** — the death-aware BPT: run elapsed so far, plus the best
   known time from your current position (checkpoint or segment start) to the
   segment exit, plus the best known time for every full segment still ahead.
-  After a death this uses your *cold* best from the last checkpoint touched;
-  before any death in the segment it's identical to standard BPT.
+  Right after a death this prices from your *cold* best at the last
+  checkpoint touched; if you then reach a further checkpoint alive, it
+  prices from *hot* bests again — only Sunk keeps the death's cost on the
+  books. Before any death in the segment it's identical to standard BPT.
 - **Sunk** — how much time this segment's deaths have irrevocably cost,
   i.e. Reckoning minus standard BPT. Zero while the segment stays deathless.
 
 An unlearned row (no recorded time yet for the current marker/variant, so
 Reckoning had to fall back toward a coarser estimate) is flagged visually
 rather than silently shown as if it were solid data.
+
+## Settings
+
+Configure via the component's settings in LiveSplit's layout editor:
+
+- **Show Sunk row** — toggles the second row (default: on).
+- **Show connection status dot** — toggles the status dot (default: on).
+- **Accuracy** — time precision for both rows: Seconds, Tenths, or
+  Hundredths (default: Tenths).
 
 ## Install
 

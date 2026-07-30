@@ -25,6 +25,12 @@ DR-BPT  = run elapsed
 Sunk    = DR-BPT − standard BPT
 ```
 
+> **Shipped deviation:** the marker→exit term is anchored at the moment the
+> (marker, variant) situation was entered — `max(arrival + best, elapsed)` —
+> not re-evaluated against "now", so the estimate holds steady during
+> post-respawn play instead of ramping. See Amendment 1 in
+> `docs/superpowers/plans/2026-07-30-death-aware-bpt.md`.
+
 - `Sunk` is what deaths this segment have irrevocably cost versus the naive
   optimistic calculation. Zero while deathless.
 - Time basis follows the run's current timing method (RTA for kaizo,
@@ -55,8 +61,11 @@ checkpoint alive and in flow (resources, momentum, Yoshi, powerup, timer
 state); **cold** = you respawned there after a death. Marker→exit times
 differ between the two, so bests are recorded **separately per variant**:
 
-- After a death, DR-BPT uses the **cold** best from the current marker —
-  that is the situation the runner is actually in.
+- After a death, DR-BPT prices from the **variant matching the tracked
+  situation** at the current marker (cold right after respawn; hot again
+  once a later checkpoint is reached alive) — that is the situation the
+  runner is actually in. See Amendment 2 in
+  `docs/superpowers/plans/2026-07-30-death-aware-bpt.md`.
 - Marker 0 has both variants too: hot = entered the segment normally,
   cold = respawned at segment/level start after a death before any
   checkpoint.

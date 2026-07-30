@@ -70,7 +70,7 @@ internal sealed class SnesConnection : ISnesMemory
             bool wasReady = ready;
             if (ready && emu.Generation != lastGeneration) ready = false;   // rebind: re-baseline
             try { emu.Ready(); } catch { ready = false; }                   // the throw IS "not ready"
-            if (!ready && !wasReady && process != null)
+            if (!ready && !wasReady)
             {
                 // Skipped for one tick right after a drop so IsAttached reads false
                 // exactly once and the detector flushes its edge state.
