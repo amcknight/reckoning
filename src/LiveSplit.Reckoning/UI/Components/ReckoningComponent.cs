@@ -24,7 +24,19 @@ public class ReckoningComponent : IComponent
     private const int UnlearnedValueAlpha = 128;
     // Matches LiveSplit's InfoTextComponent default row height.
     private const float RowHeightPx = 25f;
+    // 5x5 px matches SMWCounters' proven status-pixel size — small enough to
+    // be unobtrusive, large enough to read color at a glance.
     private const float StatusDotSizePx = 5f;
+    // Matches SMWCounters' fixed dot position: pinned near the component's
+    // left edge, clear of the row padding so text never overlaps it.
+    private const float StatusDotLeftPx = 3f;
+    // Horizontal layout mode: room for label + "1:02:03.45" value at default
+    // fonts; the minimum keeps both legible before ellipsis truncation.
+    private const float HorizontalWidthPx = 220f;
+    private const float MinimumWidthPx = 120f;
+    // 7f per side matches LiveSplit's InfoTextComponent intrinsic padding, so
+    // the rows align with stock info components in the same layout.
+    private const float SidePaddingPx = 7f;
 
     private readonly LiveSplitState state;
     private readonly SnesConnection connection = new();
@@ -59,12 +71,12 @@ public class ReckoningComponent : IComponent
     public string ComponentName => "Reckoning";
     public float VerticalHeight => Settings.ShowSunkRow ? RowHeightPx * 2 : RowHeightPx;
     public float MinimumHeight => VerticalHeight;
-    public float HorizontalWidth => 220f;
-    public float MinimumWidth => 120f;
+    public float HorizontalWidth => HorizontalWidthPx;
+    public float MinimumWidth => MinimumWidthPx;
     public float PaddingTop => 0f;
     public float PaddingBottom => 0f;
-    public float PaddingLeft => 7f;
-    public float PaddingRight => 7f;
+    public float PaddingLeft => SidePaddingPx;
+    public float PaddingRight => SidePaddingPx;
     public IDictionary<string, Action> ContextMenuControls => null;
 
     private TimeSpan? Elapsed() => state.CurrentTime[state.CurrentTimingMethod];
@@ -131,7 +143,13 @@ public class ReckoningComponent : IComponent
 
     private ReckoningResult ComputeNow()
     {
-        if (!model.IsRunning || state.CurrentSplitIndex < 0 || Elapsed() is not TimeSpan elapsed)
+        // Upper bound mirrors LiveSplit's own CurrentSplit accessor: after the
+        // final split, CurrentSplitIndex == Run.Count (phase Ended) while the
+        // model still reads as running — indexing Run there would throw on
+        // every redraw and stall the layout's update loop.
+        if (!model.IsRunning
+            || state.CurrentSplitIndex < 0 || state.CurrentSplitIndex >= state.Run.Count
+            || Elapsed() is not TimeSpan elapsed)
             return new ReckoningResult(null, null, false, BestSource.StandardBpt);
 
         var method = state.CurrentTimingMethod;
@@ -195,7 +213,7 @@ public class ReckoningComponent : IComponent
         if (Settings.ShowStatusDot)
         {
             using var dotBrush = new SolidBrush(connection.DotColor);
-            g.FillRectangle(dotBrush, 3f, (height - StatusDotSizePx) / 2f, StatusDotSizePx, StatusDotSizePx);
+            g.FillRectangle(dotBrush, StatusDotLeftPx, (height - StatusDotSizePx) / 2f, StatusDotSizePx, StatusDotSizePx);
         }
     }
 
