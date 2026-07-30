@@ -1460,14 +1460,23 @@ public class SmwEventDetectorTests
     }
 
     [Fact]
-    public void CpEntranceChangeToFirstRoomIsSuppressed()
+    public void CpEntranceRearmAfterLevelEntryIsSuppressed()
     {
-        // Retry hacks re-arm the entrance byte to the level's own entry room on
-        // load; that change must not read as a checkpoint.
-        mem.SetByte(SmwAddresses.CpEntrance, 9);
-        Poll();
-        mem.SetByte(SmwAddresses.CpEntrance, 2);   // firstRoom captured in EnterLevel
-        Assert.False(Poll().Checkpoint);
+        // Entering a new level with a stale cpEntrance (previous level's
+        // checkpoint) that re-arms to the entry room a tick later: neither the
+        // entry tick nor the lagged re-arm is a checkpoint touch.
+        var fresh = new SmwEventDetector();
+        var m2 = new FakeSnesMemory();
+        m2.SetByte(SmwAddresses.LevelStart, 1);
+        m2.SetByte(SmwAddresses.LevelNum, 5);
+        m2.SetByte(SmwAddresses.RoomNum, 2);
+        m2.SetByte(SmwAddresses.CpEntrance, 9);    // stale checkpoint from a previous level
+        fresh.Poll(m2);                             // baseline
+        m2.SetByte(SmwAddresses.LevelNum, 6);       // enter new level
+        m2.SetByte(SmwAddresses.RoomNum, 11);
+        Assert.False(fresh.Poll(m2).Checkpoint);    // entry tick: levelChanged suppresses
+        m2.SetByte(SmwAddresses.CpEntrance, 11);    // re-arm lags one tick
+        Assert.False(fresh.Poll(m2).Checkpoint);    // now equals firstRoom: suppressed
     }
 
     [Fact]
