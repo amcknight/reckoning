@@ -56,17 +56,18 @@ and never crashes if it's missing or corrupt.
 
 ## Status dot
 
-The connection-health dot uses the same color legend as SMWCounters:
+The connection-health dot reuses SMWCounters' status-pixel pattern and
+snes_offsets' `SNES.dll` connection states:
 
 | Color  | Meaning |
 |--------|---------|
-| Blue   | Resolved — attached and reading a known ROM |
-| Yellow | Searching for an emulator/ROM |
-| Red    | Detached — no emulator process found |
-| Purple | Held — connection paused (e.g. LiveSplit not running) |
-| Green  | Degraded — attached but working around a partial read |
-| Orange | Attached with no recognizable content loaded |
-| Gray   | Cooldown after a failed connection attempt, before retrying |
+| Blue   | Resolved — memory base confirmed, uncontested; reads are trustworthy |
+| Yellow | Searching/Discovering — attached, still locating the game in memory |
+| Red    | Detached — no emulator process found, or it exited |
+| Purple | Held — base was confirmed but activity has gone quiet past the dwell window (e.g. paused/menu); kept so resume is instant |
+| Green  | Degraded — base confirmed but contested by a rival candidate; reads still valid |
+| Orange | No content — attached, but nothing in memory is changing (no ROM loaded, or fully paused) |
+| Gray   | Cooldown after a failed connection attempt, shown in place of yellow/orange while waiting to retry |
 
 ## Building from source
 
