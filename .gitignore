@@ -1,5 +1,8 @@
+artifacts/
 bin/
 obj/
-artifacts/
+lib/*.dll
+!lib/SNES.dll
+*.local.props
 *.user
-.vs/
+.superpowers/

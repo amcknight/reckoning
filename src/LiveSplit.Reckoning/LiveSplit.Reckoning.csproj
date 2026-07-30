@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <RootNamespace>LiveSplit.Reckoning</RootNamespace>
+    <AssemblyName>Reckoning</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <Version>0.1.0</Version>
+    <!-- Kept in sync with scripts/fetch-livesplit-core.ps1 -->
+    <LiveSplitVersion>1.8.37</LiveSplitVersion>
+  </PropertyGroup>
+
+  <!-- LiveSplit refs: ProjectReference in super-repo dev mode, lib dlls otherwise.
+       Private=false: LiveSplit provides these at runtime, never ship them. -->
+  <ItemGroup Condition="'$(LsSrcPath)' != ''">
+    <ProjectReference Include="$(LsSrcPath)\LiveSplit.Core\LiveSplit.Core.csproj" Private="false" ExcludeAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(LsSrcPath)' == ''">
+    <Reference Include="LiveSplit.Core">
+      <HintPath>$(MSBuildThisFileDirectory)..\..\lib\LiveSplit.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UpdateManager">
+      <HintPath>$(MSBuildThisFileDirectory)..\..\lib\UpdateManager.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- SNES.dll: Private=true so it lands in output and ships beside Reckoning.dll. -->
+  <ItemGroup Condition="'$(SnesSrcPath)' != ''">
+    <ProjectReference Include="$(SnesSrcPath)\src\SNES\SNES.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SnesSrcPath)' == ''">
+    <Reference Include="SNES">
+      <HintPath>$(MSBuildThisFileDirectory)..\..\lib\SNES.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="all" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+
+  <!-- Deploy to a live LiveSplit install when Reckoning.local.props defines ComponentsPath.
+       ContinueOnError: LiveSplit locks loaded DLLs; warn instead of failing the build. -->
+  <Import Project="Reckoning.local.props" Condition="Exists('Reckoning.local.props')" />
+  <Target Name="CopyToLiveSplitComponents" AfterTargets="Build" Condition="Exists('$(ComponentsPath)')">
+    <ItemGroup>
+      <_DeployPair Include="$(TargetPath);$(TargetDir)SNES.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DeployPair)" DestinationFolder="$(ComponentsPath)" ContinueOnError="WarnAndContinue" />
+    <Touch Files="@(_DeployPair->'$(ComponentsPath)\%(Filename)%(Extension)')" ContinueOnError="WarnAndContinue" />
+  </Target>
+</Project>

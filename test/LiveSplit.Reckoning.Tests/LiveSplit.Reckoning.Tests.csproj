@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LiveSplit.Reckoning\LiveSplit.Reckoning.csproj" />
+  </ItemGroup>
+  <!-- Private=true: tests need these present at runtime (LiveSplit isn't hosting us). -->
+  <ItemGroup Condition="'$(LsSrcPath)' == ''">
+    <Reference Include="LiveSplit.Core">
+      <HintPath>..\..\lib\LiveSplit.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="UpdateManager">
+      <HintPath>..\..\lib\UpdateManager.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

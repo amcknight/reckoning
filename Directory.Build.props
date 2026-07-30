@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <_SuperRepoBuildProps>$([MSBuild]::GetPathOfFileAbove(Directory.Build.props, $(MSBuildThisFileDirectory)..))</_SuperRepoBuildProps>
+  </PropertyGroup>
+  <Import Project="$(_SuperRepoBuildProps)" Condition="'$(_SuperRepoBuildProps)' != ''" />
+  <Import Project="$(MSBuildThisFileDirectory)props\*.props" />
+</Project>
