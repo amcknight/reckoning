@@ -7,3 +7,4 @@ lib/*.dll
 *.user
 .superpowers/
 .vs/
+.claude/wrap/
