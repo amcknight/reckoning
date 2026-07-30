@@ -6,3 +6,4 @@ lib/*.dll
 *.local.props
 *.user
 .superpowers/
+.vs/

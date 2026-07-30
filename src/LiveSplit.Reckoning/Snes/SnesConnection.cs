@@ -23,7 +23,7 @@ internal sealed class SnesConnection : ISnesMemory
 
     public EmuStatus Status { get; private set; }
 
-    public bool IsAttached => ready && process != null && !process.HasExited;
+    public bool IsAttached => ready && process != null && !HasExitedSafe(process);
 
     public int Generation => emu.Generation;
 
@@ -40,7 +40,7 @@ internal sealed class SnesConnection : ISnesMemory
 
     public void Tick()
     {
-        if (process != null && process.HasExited)
+        if (process != null && HasExitedSafe(process))
         {
             process.Dispose();
             process = null;
@@ -56,20 +56,26 @@ internal sealed class SnesConnection : ISnesMemory
                 process = EmulatorProcessFinder.Find();
                 if (process != null)
                 {
-                    emu.Attach(process);
+                    // A process that dies between find and attach must not
+                    // throw out of Tick.
+                    try { emu.Attach(process); }
+                    catch { process = null; }
                     ready = false;
                 }
             }
         }
 
-        bool wasReady = ready;
-        if (ready && emu.Generation != lastGeneration) ready = false;   // rebind: re-baseline
-        try { emu.Ready(); } catch { ready = false; }                   // the throw IS "not ready"
-        if (!ready && !wasReady && process != null)
+        if (process != null)
         {
-            // Skipped for one tick right after a drop so IsAttached reads false
-            // exactly once and the detector flushes its edge state.
-            try { emu.GetOffset(); ready = true; lastGeneration = emu.Generation; } catch { }
+            bool wasReady = ready;
+            if (ready && emu.Generation != lastGeneration) ready = false;   // rebind: re-baseline
+            try { emu.Ready(); } catch { ready = false; }                   // the throw IS "not ready"
+            if (!ready && !wasReady && process != null)
+            {
+                // Skipped for one tick right after a drop so IsAttached reads false
+                // exactly once and the detector flushes its edge state.
+                try { emu.GetOffset(); ready = true; lastGeneration = emu.Generation; } catch { }
+            }
         }
 
         Status = emu.Status();
@@ -81,5 +87,14 @@ internal sealed class SnesConnection : ISnesMemory
         if (!IsAttached) return false;
         try { value = emu.Read1(wramOffset); return true; }
         catch { return false; }
+    }
+
+    // process.HasExited can throw Win32Exception on an access-denied process
+    // (e.g. running elevated); treat that as "exited" rather than let it
+    // propagate out of the poll loop.
+    private static bool HasExitedSafe(Process p)
+    {
+        try { return p.HasExited; }
+        catch { return true; }
     }
 }

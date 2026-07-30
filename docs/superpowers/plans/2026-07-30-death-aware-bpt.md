@@ -2879,3 +2879,11 @@ Do not merge — Andrew reviews the diff against main and merges himself. Option
 
 **Type consistency:** `BestsStore.SetEntry/TryGetEntry/RemoveEntry/Keys` used by Tasks 5, 8; `SegmentTracker.CompleteSegment` returns `IReadOnlyList<Observation>` consumed in Task 5; `ReckoningModel.Compute(TimeSpan, TimeSpan, TimeSpan?, TimeSpan?)` matches Task 9's call; `DetectorTick(Death, Checkpoint, Respawn)` matches Task 9's usage; `StatusDot.ColorFor(string, bool)` matches Tasks 7 and 9. Verified consistent.
 
+## Amendments (final review)
+
+Three design-level corrections discovered by the final whole-branch review, applied in the fix wave (Andrew: these amend the spec's literal formulas — review before merge):
+
+1. **Anchored post-death term.** The spec's `DR-BPT = elapsed + best(marker→exit)` is only valid at the instant the situation is entered; implemented as `max(situationArrival + best, elapsed)` so the estimate holds steady during post-respawn play instead of ramping 1s/s.
+2. **Variant follows the tracked situation.** After death → respawn → next checkpoint reached alive, the runner is Hot at that marker; the calculator now prices the tracked (marker, variant) with the other variant then standard BPT as fallback, rather than hard-preferring Cold whenever a death occurred this segment.
+3. **Unanchored resume after undo/skip.** Restarting the tracker at undo/skip time opened a marker-0 observation with a mid-segment anchor, which recorded impossibly fast bests. Undo/skip now resume tracking with no marker-0 observation; only anchored arrivals (checkpoints, respawns) record for that segment.
+

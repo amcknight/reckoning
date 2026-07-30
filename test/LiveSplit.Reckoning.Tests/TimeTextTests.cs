@@ -36,4 +36,10 @@ public class TimeTextTests
     {
         Assert.Equal(expected, TimeText.FormatSunk(TimeSpan.FromSeconds(seconds), (RowAccuracy)accuracy));
     }
+
+    [Fact]
+    public void SunkGetsMinusPrefixWhenNegative()
+    {
+        Assert.Equal("-0:03.4", TimeText.FormatSunk(TimeSpan.FromSeconds(-3.42), RowAccuracy.Tenths));
+    }
 }

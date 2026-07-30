@@ -81,7 +81,7 @@ public class ReckoningComponent : IComponent
 
     private TimeSpan? Elapsed() => state.CurrentTime[state.CurrentTimingMethod];
 
-    private void Poll()
+    private void PollCore()
     {
         connection.Tick();
         if (connection.Generation != lastGeneration)
@@ -98,6 +98,16 @@ public class ReckoningComponent : IComponent
         if (tick.Death) model.OnDeath();
         if (tick.Checkpoint) model.OnCheckpoint(elapsed);
         if (tick.Respawn) model.OnRespawn(elapsed);
+    }
+
+    private void Poll()
+    {
+        try { PollCore(); }
+        catch
+        {
+            // Never let a poll fault escape into LiveSplit's UI thread; next
+            // tick retries and the status dot shows degraded state.
+        }
     }
 
     private void ReloadSidecarIfPathChanged()

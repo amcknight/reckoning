@@ -61,19 +61,21 @@ public sealed class ReckoningModel
             }
         }
         if (CurrentSegmentIndex > 0) CurrentSegmentIndex--;
-        // Spec: the affected segment's marker state and in-flight observations
-        // are discarded — we restart it at marker 0.
-        tracker.Discard();
-        tracker.StartSegment(elapsed);
+        // The affected segment's marker state and in-flight observations are
+        // discarded, but its true start time is now mid-flight and unknowable —
+        // resume with no marker-0 observation so a later split can't record an
+        // impossibly fast marker-0 best.
+        tracker.ResumeSegmentUnanchored();
     }
 
     public void OnSkipSplit(TimeSpan elapsed)
     {
         if (!IsRunning) return;
-        tracker.Discard();                       // skip is not a real split: record nothing
         journal.Push(new List<(MarkerKey, BestEntry)>());   // keep journal aligned with undo depth
         CurrentSegmentIndex++;
-        tracker.StartSegment(elapsed);
+        // Skip is not a real split: record nothing, and the segment now in
+        // flight has no knowable start time either — resume unanchored.
+        tracker.ResumeSegmentUnanchored();
     }
 
     public void OnReset()
@@ -93,7 +95,7 @@ public sealed class ReckoningModel
         int segment = CurrentSegmentIndex;
         return ReckoningCalculator.Compute(
             elapsed, segmentStartElapsed, currentSegmentFullBest, remainingFullBestsSum,
-            tracker.DiedThisSegment, tracker.CurrentMarker,
+            tracker.DiedThisSegment, tracker.CurrentMarker, tracker.CurrentVariant, tracker.CurrentArrival,
             (marker, variant) => store.TryGetBest(segment, marker, variant, out var b) ? b : null);
     }
 }

@@ -72,4 +72,23 @@ public sealed class SegmentTracker
         DiedThisSegment = false;
         IsActive = false;
     }
+
+    /// <summary>Resume tracking after undo/skip: the segment is mid-flight and its
+    /// true start time is unknowable, so no marker-0 observation is opened —
+    /// only genuinely anchored arrivals (checkpoint touches, respawns) from here
+    /// on may record for this segment.</summary>
+    public void ResumeSegmentUnanchored()
+    {
+        open.Clear();
+        CurrentMarker = 0;
+        CurrentVariant = Variant.Hot;
+        DiedThisSegment = false;
+        IsActive = true;
+    }
+
+    /// <summary>Run-elapsed at which the current (marker, variant) situation was
+    /// entered, or null when no anchored arrival exists (death animation before
+    /// respawn, or an unanchored resume).</summary>
+    public TimeSpan? CurrentArrival =>
+        open.TryGetValue((CurrentMarker, CurrentVariant), out var t) ? t : (TimeSpan?)null;
 }

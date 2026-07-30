@@ -19,7 +19,13 @@ internal static class EmulatorProcessFinder
             Process winner = null;
             foreach (var p in Process.GetProcessesByName(name))
             {
-                if (winner == null && !p.HasExited) winner = p;
+                // HasExited can throw on an access-denied process; treat a
+                // throw as unusable rather than let it escape the scan.
+                bool usable;
+                try { usable = !p.HasExited; }
+                catch { usable = false; }
+
+                if (winner == null && usable) winner = p;
                 else p.Dispose();
             }
             if (winner != null) return winner;

@@ -17,4 +17,8 @@ internal static class SmwAddresses
     public const byte DeathAnimation = 9;
     public const byte GameModePrepareLevel = 18;
     public const byte InLevel = 1;
+    public const byte IoOrb = 3;
+    public const byte IoGoal = 4;
+    public const byte IoKey = 7;
+    public const byte IoFadeout = 8;
 }

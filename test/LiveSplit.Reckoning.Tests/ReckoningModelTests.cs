@@ -119,4 +119,61 @@ public class ReckoningModelTests
         Assert.Equal(S(140 + 22 + 200), r.DrBpt);
         Assert.Equal(BestSource.ColdBest, r.Source);
     }
+
+    [Fact]
+    public void UndoThenSplitRecordsNoMarkerZeroBest()
+    {
+        var store = new BestsStore();
+        var m = new ReckoningModel(store);
+        m.OnStart(S(0));
+        m.OnSplit(S(50));            // records hot-0 = 50s
+        m.OnUndoSplit(S(55));        // reverts the 50s record; resumes unanchored
+        m.OnSplit(S(70));            // no anchored observation existed: records nothing
+        Assert.False(store.TryGetBest(0, 0, Variant.Hot, out _));
+    }
+
+    [Fact]
+    public void SkipThenSplitRecordsNothingForSkippedIntoSegment()
+    {
+        var store = new BestsStore();
+        var m = new ReckoningModel(store);
+        m.OnStart(S(0));
+        m.OnSkipSplit(S(30));        // segment 1 begins unanchored
+        m.OnSplit(S(60));            // no anchored observation existed: records nothing
+        Assert.False(store.TryGetBest(1, 0, Variant.Hot, out _));
+        Assert.Empty(store.Keys);
+    }
+
+    [Fact]
+    public void CheckpointAfterUndoStillRecordsAnchored()
+    {
+        var store = new BestsStore();
+        var m = new ReckoningModel(store);
+        m.OnStart(S(0));
+        m.OnSplit(S(50));
+        m.OnUndoSplit(S(55));        // resumes segment 0 unanchored
+        m.OnCheckpoint(S(60));       // genuinely anchored arrival at marker 1
+        m.OnSplit(S(80));
+        Assert.True(store.TryGetBest(0, 1, Variant.Hot, out var marker1));
+        Assert.Equal(S(20), marker1);
+        Assert.False(store.TryGetBest(0, 0, Variant.Hot, out _));
+    }
+
+    [Fact]
+    public void PostRespawnCheckpointPricesHotVariant()
+    {
+        var store = new BestsStore();
+        store.SetEntry(new MarkerKey(0, 1, Variant.Hot), new BestEntry(18_000, 1));
+        store.SetEntry(new MarkerKey(0, 1, Variant.Cold), new BestEntry(22_000, 1));
+        var m = new ReckoningModel(store);
+        m.OnStart(S(0));
+        m.OnDeath();
+        m.OnRespawn(S(10));
+        m.OnCheckpoint(S(30));       // reached checkpoint alive: hot at marker 1
+        var r = m.Compute(S(40), segmentStartElapsed: S(0),
+            currentSegmentFullBest: S(50), remainingFullBestsSum: S(100));
+        Assert.Equal(S(30 + 18 + 100), r.DrBpt);
+        Assert.Equal(BestSource.HotBest, r.Source);
+        Assert.False(r.Unlearned);
+    }
 }

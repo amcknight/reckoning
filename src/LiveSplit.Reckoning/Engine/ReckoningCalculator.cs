@@ -11,6 +11,8 @@ public static class ReckoningCalculator
         TimeSpan? remainingFullBestsSum,
         bool diedThisSegment,
         int currentMarker,
+        Variant currentVariant,
+        TimeSpan? situationArrivalElapsed,
         Func<int, Variant, TimeSpan?> markerBest)
     {
         // Standard BPT's current-segment finish: can't finish in the past,
@@ -27,20 +29,26 @@ public static class ReckoningCalculator
             return new ReckoningResult(standardBpt, standardBpt is null ? null : TimeSpan.Zero, false, BestSource.StandardBpt);
         }
 
-        // Fallback chain: cold -> hot -> standard BPT (spec §Hot/cold).
+        // The situation's best is anchored at the moment the situation was entered,
+        // not at "now" — otherwise the estimate ramps upward during normal play.
+        // Before respawn there is no anchor yet: time is genuinely still bleeding,
+        // so `elapsed` is the honest anchor and the estimate rises until respawn.
+        TimeSpan anchor = situationArrivalElapsed ?? elapsed;
+        Variant other = currentVariant == Variant.Cold ? Variant.Hot : Variant.Cold;
         TimeSpan? finish;
         BestSource source;
         bool unlearned;
-        if (markerBest(currentMarker, Variant.Cold) is TimeSpan cold)
+        if (markerBest(currentMarker, currentVariant) is TimeSpan preferred)
         {
-            finish = elapsed + cold;
-            source = BestSource.ColdBest;
+            finish = Max(anchor + preferred, elapsed);
+            source = ToSource(currentVariant);
             unlearned = false;
         }
-        else if (markerBest(currentMarker, Variant.Hot) is TimeSpan hot)
+        else if (markerBest(currentMarker, other) is TimeSpan fallback)
         {
-            finish = elapsed + hot;
-            source = BestSource.HotBest;
+            // Wrong-variant data beats no data; flagged unlearned (spec fallback chain).
+            finish = Max(anchor + fallback, elapsed);
+            source = ToSource(other);
             unlearned = true;
         }
         else
@@ -56,6 +64,8 @@ public static class ReckoningCalculator
         TimeSpan? sunk = drBpt is TimeSpan d && standardBpt is TimeSpan s ? d - s : null;
         return new ReckoningResult(drBpt, sunk, unlearned, source);
     }
+
+    private static BestSource ToSource(Variant v) => v == Variant.Cold ? BestSource.ColdBest : BestSource.HotBest;
 
     private static TimeSpan Max(TimeSpan a, TimeSpan b) => a >= b ? a : b;
 

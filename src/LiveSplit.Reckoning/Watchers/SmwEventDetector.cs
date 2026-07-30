@@ -56,7 +56,8 @@ internal sealed class SmwEventDetector
         }
 
         // Finish flags fire against the last non-zero io value.
-        bool finishFired = cur.Io is 3 or 4 or 7 or 8 && cur.Io != lastNonZeroIo;
+        bool finishFired = cur.Io is SmwAddresses.IoOrb or SmwAddresses.IoGoal or SmwAddresses.IoKey or SmwAddresses.IoFadeout
+                         && cur.Io != lastNonZeroIo;
 
         // Level transition: capture the entry room BEFORE evaluating checkpoint
         // logic — on the entry tick levelNum/roomNum/cpEntrance all change
