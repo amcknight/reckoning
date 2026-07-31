@@ -3,10 +3,10 @@
 ## Overview
 
 **Reckoning** is a LiveSplit layout component (C#) for SMW kaizo runs that
-shows a **Death-aware Best Possible Time** (DR-BPT) plus a sunk-time detail
-line. The name is from *dead reckoning*: computing your position from a known
-past point — here, reckoning your best possible finish from where death
-actually left you.
+shows a **death-aware run prediction** for any LiveSplit comparison, with
+time lost to deaths surfaced as a transient damage number. The name is from
+*dead reckoning*: computing your position from a known past point — here,
+reckoning your best possible finish from where death actually left you.
 
 LiveSplit's standard Best Possible Time assumes the current segment can still
 be completed in best-segment time. That's wrong the moment you die: you're
@@ -30,6 +30,18 @@ Sunk    = DR-BPT − standard BPT
 > not re-evaluated against "now", so the estimate holds steady during
 > post-respawn play instead of ramping. See Amendment 1 in
 > `docs/superpowers/plans/2026-07-30-death-aware-bpt.md`.
+
+> **Shipped deviation (Run Prediction rebase, 2026-07-31):** the
+> `Σ remaining full segments` term is gone. Reckoning now composes stock
+> Run Prediction's formula for the *selected comparison* —
+> `max(lastDelta, liveDelta) + comparisonFinal` — and substitutes a
+> death-aware live delta built from the current split's predicted finish.
+> The comparison supplies everything beyond the current split, so this
+> generalizes past Best Segments to any comparison. `Sunk` is
+> correspondingly the death-aware value minus the stock value (still
+> exactly zero while deathless) and is no longer displayed as a row — it
+> drives the damage-hit overlay. See
+> `docs/superpowers/plans/2026-07-30-run-prediction-rebase.md`.
 
 - `Sunk` is what deaths this segment have irrevocably cost versus the naive
   optimistic calculation. Zero while deathless.
@@ -69,9 +81,14 @@ differ between the two, so bests are recorded **separately per variant**:
 - Marker 0 has both variants too: hot = entered the segment normally,
   cold = respawned at segment/level start after a death before any
   checkpoint.
-- Fallback chain when data is unlearned: cold → hot → full best segment
-  (i.e., degrade gracefully to standard BPT), with the row visually flagged
-  as unlearned (see Display).
+- Fallback chain when data is unlearned: cold → hot → **gold prior** →
+  full best segment from segment start, with the value visually flagged as
+  unlearned (see Display). The gold prior (shipped 2026-07-31) prices the
+  future as `segment gold − (this run's hot arrival at the marker −
+  segment start)`, clamped at zero and anchored at the situation entry;
+  marker 0's hot arrival is the segment start, so it collapses to "replay
+  the segment from the respawn". The final rung is reached only when the
+  hot arrival is unknowable (unanchored resume after undo/skip).
 
 ## Detection seam
 
@@ -98,22 +115,29 @@ differ between the two, so bests are recorded **separately per variant**:
   are the future export surface for the `segments` probabilistic model.
 - Bests only update on a *completed* marker→exit observation ending in a
   real split (not skip/undo/reset).
-- File is written atomically (write-temp-then-rename) on split and on
-  LiveSplit shutdown; corrupt/missing sidecar degrades to unlearned, never
-  crashes the component.
+- File is written atomically (write-temp-then-rename) whenever LiveSplit
+  writes the splits file, so learned data shadows the `.lss` exactly like
+  golds do — splitting alone persists nothing, and closing without saving
+  splits discards the session's learning. (Shipped deviation, 2026-07-31:
+  the spec originally said "on split and on shutdown". Shutdown still
+  saves, but only when the `.lss` was rewritten after the component
+  loaded, to cover LiveSplit's exit-save race.) Corrupt/missing sidecar
+  degrades to unlearned, never crashes the component.
 
 ## Display
 
-Two lines in one component:
+One row plus overlays:
 
-1. **Reckoning** — the DR-BPT time, styled like LiveSplit's standard Best
-   Possible Time info-text row.
-2. **Sunk** — time lost to deaths this segment vs. standard BPT.
+One stock-styled Run Prediction row: the comparison's own label (following
+stock's naming) and the death-aware predicted finish. Time lost to deaths
+is not a second row — it appears as a transient red damage number left of
+the value, which grows during the death animation, freezes on the first
+frame after respawn, and fades over ~2.5 s.
 
-An unlearned marker (fallback in effect) gets a subtle visual flag (e.g.
-dimmed value or marker glyph — final treatment decided during
-implementation). Connection health may reuse SMWCounters' status-pixel
-pattern.
+An unlearned marker (fallback in effect) renders the value in a fixed dim
+gray — the original "dimmed value" treatment vanished into dark layouts in
+live testing. Connection health reuses SMWCounters' status-pixel pattern,
+drawn in a reserved left gutter.
 
 ## Architecture
 

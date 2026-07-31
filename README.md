@@ -1,12 +1,14 @@
 # Reckoning
 
-**Death-aware Best Possible Time** for [LiveSplit](https://livesplit.org/) —
-a layout component for SMW kaizo runs.
+**Death-aware run prediction** for [LiveSplit](https://livesplit.org/) —
+a layout component for SMW kaizo runs. Point it at Best Segments and it is
+a death-aware Best Possible Time; every other comparison works too.
 
-LiveSplit's standard Best Possible Time assumes the current segment can still
-be completed in your best-segment time. That assumption breaks the moment you
-die: you're back at a checkpoint, and the part of the segment you still have
-to replay can't be compressed below your best *from that checkpoint*.
+LiveSplit's run predictions assume the current segment can still be
+completed in its comparison time — for Best Possible Time, your
+best-segment time. That assumption breaks the moment you die: you're back
+at a checkpoint, and the part of the segment you still have to replay
+can't be compressed below your best *from that checkpoint*.
 Reckoning watches deaths and checkpoint touches via emulator WRAM (through
 [snes_offsets](https://github.com/amcknight/snes_offsets)'s `SNES.dll`) and
 recomputes what finish time is actually still reachable from where death left
@@ -16,23 +18,32 @@ position.
 ## Display
 
 Reckoning works like LiveSplit's stock **Run Prediction** component for any
-comparison you pick — the label follows the comparison exactly like stock
-does ("Best Segments" → "Best Possible Time", "Current Comparison"/PB →
-"Current Pace", and so on), and deathless, its value matches a stock Run
-Prediction component set to the same comparison digit-for-digit.
+comparison you pick — the label follows the comparison the way stock does
+("Best Segments" → "Best Possible Time", "Current Comparison"/PB →
+"Current Pace", "Average Segments" → "Predicted Time", "Worst Segments" →
+"Worst Possible Time"), except that any other comparison shows its own name
+rather than stock's longer "Current Pace (name)". Deathless, the *value*
+matches a stock Run Prediction component set to the same comparison
+digit-for-digit.
 
 Death-awareness is layered on top as a live delta: after a death, the
 predicted finish for the *current split* is repriced from your learned
 recovery pace (hot or cold) at the checkpoint or segment start you're
 recovering from, which can raise the prediction above what stock alone would
 show. Reach a further checkpoint alive and pricing flips back to hot bests.
-While the segment stays deathless the death-aware term is zero by
-construction, so there's nothing to distinguish from stock.
+With nothing learned for that checkpoint yet, Reckoning still prices the
+death: it charges you the part of your segment gold you have to replay
+from where you respawned, shown in gray as provisional. While the segment
+stays deathless the death-aware term is zero by construction, so there's
+nothing to distinguish from stock.
 
 There's no separate "Sunk" row. Instead, a death shows as a transient red
 damage number to the left of the value (e.g. `-22.4`) that grows while the
-death animation plays, freezes the instant you respawn, then fades out over
-about 2.5 seconds. Deathless, nothing is drawn there at all.
+death animation plays, freezes on the first frame after you respawn — that
+frame is where the re-anchored estimate lands, so the number reflects the
+death's real cost — then fades out over about 2.5 seconds. Deathless,
+nothing is drawn there at all, and a death the prediction fully absorbs
+(amount zero) draws nothing either rather than a meaningless `-0.0`.
 
 An unlearned estimate (no recorded time yet for the current checkpoint/
 variant, so Reckoning had to fall back toward a coarser estimate) renders in
@@ -46,8 +57,9 @@ surface is a full clone of stock Run Prediction's, plus one Reckoning-only
 toggle:
 
 - **Comparison** — which comparison to predict against (default: Current
-  Comparison). Everything else — label, value, and formula — follows this
-  pick exactly like stock Run Prediction.
+  Comparison). Value and formula follow this pick exactly like stock Run
+  Prediction; the label does too, except that unmapped comparisons show
+  their own name instead of "Current Pace (name)".
 - **Override text color / time color**, **Background** (color + gradient) —
   same as stock.
 - **Accuracy** — Seconds, Tenths, Hundredths, or Milliseconds (default:

@@ -1,10 +1,12 @@
 # Reckoning — live testing & iteration guide
 
-Written at v1 wrap-up (2026-07-30), updated for the Run Prediction rebase.
-The unit suite (98 tests) covers the calc engine, watcher semantics,
-persistence, and formatting; **what has never happened yet is a live run
-against a real emulator inside LiveSplit** — that is the first thing to do
-together.
+Written at v1 wrap-up (2026-07-30), updated through the Run Prediction
+rebase and the 2026-07-31 priors/hit fixes. The unit suite (117 tests)
+covers the calc engine, watcher semantics, persistence, and formatting.
+Andrew has now run this live once — that session produced the fixes in
+`docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md` — but the
+save-gated persistence paths and the gold prior have never been exercised
+live, so a full play session is still the first thing to do together.
 
 ## Deploy for testing
 
@@ -63,7 +65,10 @@ comparison.
    marker with plausible `bestMs`/`attempts`. Die at the same checkpoint
    again: the value now uses the learned cold best (no longer gray) and
    **holds steady after respawn** instead of ticking up 1s/s; the red hit
-   still reappears and freezes fresh (repeat deaths are never suppressed).
+   reappears and freezes on the first sample after respawn, which is what
+   captures the re-anchor jump. A hit whose amount comes out exactly zero
+   (the model absorbed the death entirely) is deliberately not drawn — a
+   missing hit there is expected, not a bug.
 5. **Persistence is save-gated — including the exit path.** Split a few more
    times WITHOUT saving, note the sidecar's file mtime, then close LiveSplit
    without saving splits and relaunch. Confirm the mtime is unchanged and the
@@ -116,16 +121,22 @@ Design lineage: spec `docs/superpowers/specs/2026-07-30-death-aware-bpt-design.m
 `docs/superpowers/plans/2026-07-30-run-prediction-rebase.md` (this branch:
 stock Run Prediction semantics for any comparison, death-awareness as a live
 delta, damage-hit overlay replacing the Sunk row, save-on-splits-save
-persistence). Engine stays pure — no LiveSplit/WRAM types — so calc changes
-are always unit-testable first: `dotnet test test/LiveSplit.Reckoning.Tests`.
+persistence) →
+`docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md` (first live
+review: unmapped comparisons show their own name, the hit freezes one
+sample after respawn, and unlearned markers get a gold prior). Engine stays
+pure — no LiveSplit/WRAM types — so calc changes are always unit-testable
+first: `dotnet test test/LiveSplit.Reckoning.Tests`.
 
 ## Known deferred follow-ups
 
 Real but non-blocking; candidates for the first iteration pass:
 
-1. **Never seen live**: the Task 6 dot-gutter layout (status dot no longer
-   overlapping the name label) and the damage-hit rendering (growth/freeze/
-   fade, positioning) — both need eyes on a real layout before trusting them.
+1. **Only one live session so far**: the dot gutter, the settings-dialog
+   sizing, and the damage-hit rendering were each seen once on 2026-07-31
+   and fixed; what has *not* been exercised live is the gold prior
+   (first-ever deaths) and the save-gated sidecar, including the
+   exit-prompt path (step 5).
 2. **Elapsed-null at split desyncs the model** — if `CurrentTime[method]` is
    null when a split fires (game-time method, no game time), `OnSplit` is
    skipped and `model.CurrentSegmentIndex` drifts from LiveSplit's. Rare for

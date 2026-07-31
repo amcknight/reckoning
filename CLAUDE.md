@@ -1,12 +1,17 @@
 # reckoning — project instructions
 
-Death-aware Best Possible Time: a LiveSplit layout component for SMW kaizo
-that computes what finish time is *actually* still possible given where death
+Death-aware run prediction: a LiveSplit layout component for SMW kaizo that
+computes what finish time is *actually* still reachable given where death
 left you. Start here: `docs/superpowers/specs/2026-07-30-death-aware-bpt-design.md`
-is the approved design spec. v1 is implemented; the plan (with a final-review
-"Amendments" section documenting three deliberate deviations from the spec's
-literal formulas) is `docs/superpowers/plans/2026-07-30-death-aware-bpt.md`,
-and the live-testing guide is `docs/TESTING.md`.
+is the approved design spec (it carries "Shipped deviation" callouts where
+the implementation departs from its literal formulas). Plan lineage: v1
+`docs/superpowers/plans/2026-07-30-death-aware-bpt.md` (its "Amendments
+(final review)" section documents three deliberate v1 deviations) → rebase
+onto stock Run Prediction semantics
+`docs/superpowers/plans/2026-07-30-run-prediction-rebase.md` →
+first-live-review fixes
+`docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md`. The
+live-testing guide is `docs/TESTING.md`.
 
 ## Sibling repos (read-only reference — never edit from here)
 
@@ -30,7 +35,8 @@ and the live-testing guide is `docs/TESTING.md`.
 
 - C# LiveSplit component, project name `LiveSplit.Reckoning`, output
   `Reckoning.dll`.
-- Red-green TDD. The calc engine (marker model, hot/cold bests, DR-BPT
-  math) stays pure — no LiveSplit or WRAM types — and fully unit-tested.
+- Red-green TDD. The calc engine (marker model, hot/cold bests, the stock
+  prediction formula, and the death-aware finish estimate) stays pure — no
+  LiveSplit or WRAM types — and fully unit-tested.
 - Work on a feature branch; Andrew reviews the diff against main and merges
   himself.
