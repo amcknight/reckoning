@@ -96,4 +96,37 @@ public class PredictionMathTests
         Assert.Equal(S(603), r.Value);
         Assert.Equal(TimeSpan.Zero, r.Sunk);
     }
+
+    [Fact]
+    public void NullElapsedLockedDeltaSurvives()
+    {
+        // Stock parity: stock stays in the Running branch when
+        // CurrentTime[method] is null — liveDelta goes null and the locked
+        // delta (lastDelta) survives untouched, exactly like a null
+        // comparisonAtCurrentSplit.
+        var r = PredictionMath.Compose(
+            lastDelta: S(3), elapsed: null,
+            comparisonAtCurrentSplit: S(120), comparisonFinal: S(600),
+            predictedFinish: null);
+        Assert.Equal(S(603), r.StockValue);
+        Assert.Equal(S(603), r.Value);
+        Assert.Equal(TimeSpan.Zero, r.Sunk);
+    }
+
+    [Fact]
+    public void NullElapsedWithNonNullPredictedFinishStillFallsBackToStock()
+    {
+        // With null elapsed there is no death-aware prediction anyway (the
+        // component skips ComputePrediction whenever elapsed is null) — but
+        // Compose must handle a non-null predictedFinish arriving alongside
+        // a null elapsed sanely regardless: treat drLive as null and fall
+        // back to the stock value rather than throw.
+        var r = PredictionMath.Compose(
+            lastDelta: S(3), elapsed: null,
+            comparisonAtCurrentSplit: S(120), comparisonFinal: S(600),
+            predictedFinish: S(118));
+        Assert.Equal(S(603), r.StockValue);
+        Assert.Equal(S(603), r.Value);
+        Assert.Equal(TimeSpan.Zero, r.Sunk);
+    }
 }

@@ -63,11 +63,19 @@ comparison.
    marker with plausible `bestMs`/`attempts`. Die at the same checkpoint
    again: the value now uses the learned cold best (no longer gray) and
    **holds steady after respawn** instead of ticking up 1s/s.
-5. **Persistence is save-gated.** Split a few more times WITHOUT saving,
-   note the sidecar's file mtime, then close LiveSplit without saving splits
-   and relaunch. Confirm the mtime is unchanged and the newer learning is
-   gone (discarded, like an unsaved gold). Repeat and actually save this
-   time — mtime updates.
+5. **Persistence is save-gated — including the exit path.** Split a few more
+   times WITHOUT saving, note the sidecar's file mtime, then close LiveSplit
+   without saving splits and relaunch. Confirm the mtime is unchanged and the
+   newer learning is gone (discarded, like an unsaved gold). Repeat and
+   actually save this time (Ctrl+S) — mtime updates. Then repeat both halves
+   again via the exit-save prompt instead of Ctrl+S (two runs recommended):
+   split further, close LiveSplit, and at the "save splits?" prompt choose
+   No/Cancel on the first run (confirm mtime unchanged, learning discarded)
+   and Yes on the second (confirm mtime updates, learning survives).
+   LiveSplit's exit flow writes the `.lss` and tears down components
+   immediately afterward, racing our FileSystemWatcher-based save, so the
+   exit-prompt path needs its own verification and can't be assumed to
+   behave like Ctrl+S.
 6. **Deathless stays deathless.** Play an entire deathless segment: no
    damage number ever appears, and the value tracks stock exactly the whole
    time.
@@ -130,11 +138,14 @@ Real but non-blocking; candidates for the first iteration pass:
    releases; read from assembly instead.
 6. **Spec's "run name/category fallback identity"** for the sidecar is
    written but never used for validation on load — conscious cut.
-7. Test polish: strengthen `DetachDropsEdgesAndLatches`'s final assert
+7. **`ComputePrediction`'s backward segment-start scan** (`ReckoningComponent.cs`)
+   contains real logic living untested in the shell — extract into a
+   testable static helper.
+8. Test polish: strengthen `DetachDropsEdgesAndLatches`'s final assert
    (gameMode edge is consumed by the reattach baseline); `Load` ignores the
    sidecar `version` field (matters only when a future schema bump changes
    field meanings).
-8. **`.github/workflows/release.yml` is finished but untracked** — harness
+9. **`.github/workflows/release.yml` is finished but untracked** — harness
    policy blocks Claude committing CI workflows; Andrew:
    `git add .github && git commit`. Also: no `origin` remote, no LICENSE
    yet (deliberate).

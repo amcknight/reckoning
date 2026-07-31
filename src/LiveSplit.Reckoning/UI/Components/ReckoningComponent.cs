@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
@@ -67,6 +68,11 @@ public class ReckoningComponent : IComponent
     private ComposedPrediction lastComposed;
     private bool lastUnlearned;
     private string previousInformationName;
+
+    // Wall-clock (not Stopwatch) so both are directly comparable against
+    // File.GetLastWriteTimeUtc in Dispose's exit-save race fix below.
+    private readonly DateTime componentStartUtc = DateTime.UtcNow;
+    private DateTime lastSidecarSaveUtc = DateTime.MinValue;
 
     public ReckoningComponentSettings Settings { get; } = new();
 
@@ -177,6 +183,7 @@ public class ReckoningComponent : IComponent
                 SidecarStore.Save(SidecarStore.PathFor(lss), store, lss,
                     state.Run.GameName, state.Run.CategoryName,
                     state.Run.Select(seg => seg.Name).ToList());
+                lastSidecarSaveUtc = DateTime.UtcNow;
             }
         }
         catch
@@ -256,10 +263,18 @@ public class ReckoningComponent : IComponent
             internalComponent.TimeValue = null;
         }
         else if (state.CurrentPhase is TimerPhase.Running or TimerPhase.Paused
-                 && state.CurrentSplitIndex >= 0 && state.CurrentSplitIndex < state.Run.Count
-                 && state.CurrentTime[method] is TimeSpan elapsed)
+                 && state.CurrentSplitIndex >= 0 && state.CurrentSplitIndex < state.Run.Count)
         {
-            var prediction = model.IsRunning ? ComputePrediction(state, method, elapsed) : null;
+            // Stock parity: stock RunPrediction stays in this Running/Paused
+            // branch even when CurrentTime[method] is null (e.g. game time
+            // with no game-time signal yet) — it just drops the live term and
+            // lets the locked delta survive. A CurrentTime[method]-guarded
+            // branch condition would instead fall through to the bare
+            // comparison-final else below, breaking parity. There is no
+            // death-aware prediction to compute without an elapsed to anchor
+            // it against, so ComputePrediction is skipped entirely.
+            TimeSpan? elapsed = state.CurrentTime[method];
+            var prediction = model.IsRunning && elapsed is TimeSpan e ? ComputePrediction(state, method, e) : null;
             lastUnlearned = prediction?.Unlearned ?? false;
             lastComposed = PredictionMath.Compose(
                 LiveSplitStateHelper.GetLastDelta(state, state.CurrentSplitIndex, comparison, method),
@@ -325,7 +340,11 @@ public class ReckoningComponent : IComponent
     private void DrawOverlays(Graphics g, LiveSplitState state, float width, float height)
     {
         int alpha = hit.Alpha(clock.ElapsedMilliseconds);
-        if (hit.Visible && alpha > 0)
+        // hit.Amount == Zero happens on fresh splits and on deaths the model
+        // fully absorbed (no time actually lost) — a red "-0.0" there reads
+        // as a phantom loss, so suppress the label rather than draw a
+        // meaningless zero.
+        if (hit.Visible && alpha > 0 && hit.Amount != TimeSpan.Zero)
         {
             float valueWidth = g.MeasureString(internalComponent.InformationValue ?? "", state.LayoutSettings.TimesFont).Width;
             hitLabel.Text = TimeText.FormatHit(hit.Amount);
@@ -337,7 +356,10 @@ public class ReckoningComponent : IComponent
             hitLabel.VerticalAlignment = StringAlignment.Center;
             hitLabel.X = 0;
             hitLabel.Y = 0;
-            hitLabel.Width = width - valueWidth - HitGapPx - 12;   // 12: InfoTextComponent's own value-label right inset
+            // Clamped to 0: a narrow component (long value text, or a
+            // shrunk layout row) can otherwise drive this negative, which
+            // SimpleLabel/StringFormat has no defined behavior for.
+            hitLabel.Width = Math.Max(0f, width - valueWidth - HitGapPx - 12);   // 12: InfoTextComponent's own value-label right inset
             hitLabel.Height = height;
             hitLabel.Draw(g);
         }
@@ -360,9 +382,19 @@ public class ReckoningComponent : IComponent
             // dot instead of under it; the dot itself is drawn afterward, at
             // full (untranslated) coordinates, in DrawOverlays.
             var savedTransform = g.Save();
-            g.TranslateTransform(DotGutterPx, 0);
-            internalComponent.DrawVertical(g, state, Math.Max(0f, width - DotGutterPx), clipRegion);
-            g.Restore(savedTransform);
+            try
+            {
+                g.TranslateTransform(DotGutterPx, 0);
+                internalComponent.DrawVertical(g, state, Math.Max(0f, width - DotGutterPx), clipRegion);
+            }
+            finally
+            {
+                // Must run even if the internal draw throws, or every
+                // subsequent frame (including DrawOverlays below) inherits a
+                // stale translated origin instead of the untranslated one it
+                // expects.
+                g.Restore(savedTransform);
+            }
         }
         else
         {
@@ -383,9 +415,18 @@ public class ReckoningComponent : IComponent
             // (unchanged) intrinsic width plus this translate exactly fills
             // the advertised row width.
             var savedTransform = g.Save();
-            g.TranslateTransform(DotGutterPx, 0);
-            internalComponent.DrawHorizontal(g, state, height, clipRegion);
-            g.Restore(savedTransform);
+            try
+            {
+                g.TranslateTransform(DotGutterPx, 0);
+                internalComponent.DrawHorizontal(g, state, height, clipRegion);
+            }
+            finally
+            {
+                // See DrawVertical: must run even if the internal draw
+                // throws, or the stale translated origin leaks into
+                // DrawOverlays and every subsequent frame.
+                g.Restore(savedTransform);
+            }
         }
         else
         {
@@ -402,8 +443,32 @@ public class ReckoningComponent : IComponent
 
     public void Dispose()
     {
-        // No SaveSidecar() here: closing without saving splits must discard
-        // the session's learning, exactly like an unsaved gold.
+        // Exit-save race fix: LiveSplit's exit flow writes the .lss then
+        // immediately disposes components, racing the FileSystemWatcher's
+        // threadpool callback — the watcher may never get to run before the
+        // process tears down, silently losing the session's learning. If the
+        // splits file's mtime is newer than both this component's start and
+        // our last completed sidecar save, the save-gated watcher plainly
+        // hasn't caught up yet, so save synchronously here. Wall-clock
+        // (DateTime.UtcNow) rather than Stopwatch ticks: only wall-clock is
+        // comparable against a file mtime. If the .lss was never (re)written
+        // since start, this correctly stays silent: closing WITHOUT saving
+        // splits must still discard the session's learning, exactly like an
+        // unsaved gold.
+        try
+        {
+            if (!string.IsNullOrEmpty(loadedLssPath))
+            {
+                DateTime lssWriteUtc = File.GetLastWriteTimeUtc(loadedLssPath);
+                if (lssWriteUtc > componentStartUtc && lssWriteUtc > lastSidecarSaveUtc)
+                    SaveSidecar();
+            }
+        }
+        catch
+        {
+            // A failed shutdown-time save must never block LiveSplit's exit.
+        }
+
         saveWatcher.Dispose();
         pollTimer.Dispose();
         state.OnStart -= OnStart;

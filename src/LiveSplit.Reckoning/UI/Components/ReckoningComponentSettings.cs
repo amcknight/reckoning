@@ -211,11 +211,19 @@ public class ReckoningComponentSettings : UserControl
     // Unlike SettingsHelper.ParseEnum (which throws Enum.Parse's exception on
     // an invalid-but-present value), this falls back to the default for both
     // a missing element and a corrupted/hand-edited one — a bad enum string
-    // in a saved layout must never crash settings load.
+    // in a saved layout must never crash settings load. SettingsHelper's own
+    // TryParseEnum wraps Enum.TryParse, which happily parses any numeric
+    // string (e.g. "7") into an enum value even when no declared member has
+    // that underlying value — C# doesn't validate numeric parses against the
+    // enum's members. A named-but-unrecognized string like "Garbage" already
+    // fails TryParse itself and needs no extra check, but numeric garbage
+    // would otherwise sail through as a bogus enum value instead of falling
+    // back, so an explicit Enum.IsDefined check is needed to catch that case too.
     private static T ParseEnumOrDefault<T>(XmlElement element, T defaultValue) where T : struct
     {
-        SettingsHelper.TryParseEnum(element, out T result, defaultValue);
-        return result;
+        return SettingsHelper.TryParseEnum(element, out T result, defaultValue) && Enum.IsDefined(typeof(T), result)
+            ? result
+            : defaultValue;
     }
 
     public int GetSettingsHashCode()

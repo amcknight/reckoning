@@ -94,4 +94,19 @@ public class ReckoningSettingsTests
         fresh.SetSettings(node);
         Assert.Equal(GradientType.Plain, fresh.BackgroundGradient);
     }
+
+    [Fact]
+    public void NumericGarbageAccuracyFallsBackToDefault()
+    {
+        // Enum.TryParse happily parses an in-range numeric string like "7"
+        // into an out-of-range TimeAccuracy value (no defined member), even
+        // though it isn't a recognized name — must fall back same as
+        // "Garbage" rather than sail through as a bogus enum value.
+        var doc = new XmlDocument();
+        var node = new ReckoningComponentSettings().GetSettings(doc);
+        node["Accuracy"].InnerText = "7";
+        var fresh = new ReckoningComponentSettings();
+        fresh.SetSettings(node);
+        Assert.Equal(TimeAccuracy.Seconds, fresh.Accuracy);
+    }
 }
