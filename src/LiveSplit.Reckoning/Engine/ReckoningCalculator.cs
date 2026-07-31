@@ -15,6 +15,7 @@ public static class ReckoningCalculator
         int currentMarker,
         Variant currentVariant,
         TimeSpan? situationArrivalElapsed,
+        TimeSpan? hotArrivalAtCurrentMarker,
         Func<int, Variant, TimeSpan?> markerBest)
     {
         if (!diedThisSegment) return null;
@@ -33,7 +34,21 @@ public static class ReckoningCalculator
         if (markerBest(currentMarker, other) is TimeSpan fallback)
             return new SituationPrediction(Max(anchor + fallback, elapsed), true, ToSource(other));
 
-        // Last rung: the segment gold from split start (can't finish in the past).
+        // Gold prior (no learned data for this marker): the segment gold is the
+        // hot prior; what remains of it from this marker is gold minus the hot
+        // time already spent reaching the marker this run. Marker 0's hot
+        // arrival is the segment start, so this collapses to "replay the
+        // segment from the anchor". Slower-than-gold arrivals clamp to zero:
+        // the prior never grants future credit for time already lost.
+        if (currentSegmentFullBest is TimeSpan gold && hotArrivalAtCurrentMarker is TimeSpan hotArrival)
+        {
+            TimeSpan remaining = gold - (hotArrival - segmentStartElapsed);
+            if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
+            return new SituationPrediction(Max(anchor + remaining, elapsed), true, BestSource.GoldPrior);
+        }
+
+        // Unanchored resume (undo/skip left the hot arrival unknowable): the
+        // segment gold from split start remains the only honest floor.
         if (currentSegmentFullBest is TimeSpan fb)
             return new SituationPrediction(Max(segmentStartElapsed + fb, elapsed), true, BestSource.StandardBpt);
 

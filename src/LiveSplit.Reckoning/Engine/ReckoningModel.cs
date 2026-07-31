@@ -97,6 +97,7 @@ public sealed class ReckoningModel
         return ReckoningCalculator.PredictFinish(
             elapsed, segmentStartElapsed, currentSegmentFullBest,
             tracker.DiedThisSegment, tracker.CurrentMarker, tracker.CurrentVariant, tracker.CurrentArrival,
+            tracker.CurrentHotArrival,
             (marker, variant) => store.TryGetBest(segment, marker, variant, out var b) ? b : null);
     }
 }

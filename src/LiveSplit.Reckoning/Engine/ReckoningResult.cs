@@ -8,6 +8,8 @@ public enum BestSource
     StandardBpt,
     ColdBest,
     HotBest,
+    /// <summary>No learned data: segment gold minus this run's hot progress to the marker, anchored at the situation.</summary>
+    GoldPrior,
 }
 
 /// <summary>Death-aware prediction of the current split's finish time

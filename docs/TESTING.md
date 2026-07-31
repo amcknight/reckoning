@@ -52,17 +52,18 @@ comparison.
    Milliseconds), Display 2 rows — each should behave exactly like the same
    setting on stock Run Prediction. "Show connection status dot" is the one
    Reckoning-only extra.
-3. **First death, unlearned.** Die before touching any checkpoint: a red
-   damage number (e.g. `-3.2`) appears left of the value, grows while the
-   death animation plays, freezes the instant you respawn, then fades to
-   invisible over ~2.5 s. Because nothing is learned yet for this
-   checkpoint, the value itself renders gray (not dimmed).
+3. **First death, unlearned.** Die before touching any checkpoint: the value
+   turns gray and prices the segment gold from the respawn ("replay from
+   respawn"), while a red damage number (e.g. `-3.2`) ticks through the death
+   animation — including any timeout sat out — freezes just after respawn,
+   then fades to invisible over ~2.5 s.
 4. **Learn it, then reuse it.** Touch a checkpoint, die, respawn, finish the
    segment, split, then **save the splits (Ctrl+S)**. Open
    `<splits>.lss.reckoning.json`: expect a hot AND a cold entry for that
    marker with plausible `bestMs`/`attempts`. Die at the same checkpoint
    again: the value now uses the learned cold best (no longer gray) and
-   **holds steady after respawn** instead of ticking up 1s/s.
+   **holds steady after respawn** instead of ticking up 1s/s; the red hit
+   still reappears and freezes fresh (repeat deaths are never suppressed).
 5. **Persistence is save-gated — including the exit path.** Split a few more
    times WITHOUT saving, note the sidecar's file mtime, then close LiveSplit
    without saving splits and relaunch. Confirm the mtime is unchanged and the

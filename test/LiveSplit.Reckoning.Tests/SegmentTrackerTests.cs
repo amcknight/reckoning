@@ -119,4 +119,18 @@ public class SegmentTrackerTests
         var obs = t.CompleteSegment(S(40));
         Assert.Equal(new Observation(0, Variant.Hot, S(10)), Assert.Single(obs));
     }
+
+    [Fact]
+    public void CurrentHotArrivalTracksTheMarkersHotOpen()
+    {
+        var t = new SegmentTracker();
+        t.StartSegment(TimeSpan.FromSeconds(90));
+        Assert.Equal(TimeSpan.FromSeconds(90), t.CurrentHotArrival);   // marker 0 = segment start
+        t.OnCheckpoint(TimeSpan.FromSeconds(110));
+        Assert.Equal(TimeSpan.FromSeconds(110), t.CurrentHotArrival);
+        t.OnDeath();
+        Assert.Equal(TimeSpan.FromSeconds(110), t.CurrentHotArrival);  // hot arrival survives death
+        t.ResumeSegmentUnanchored();
+        Assert.Null(t.CurrentHotArrival);                              // unanchored: unknown
+    }
 }

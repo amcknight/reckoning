@@ -82,4 +82,10 @@ public sealed class SegmentTracker
     /// respawn, or an unanchored resume).</summary>
     public TimeSpan? CurrentArrival =>
         open.TryGetValue((CurrentMarker, CurrentVariant), out var t) ? t : (TimeSpan?)null;
+
+    /// <summary>Run-elapsed of this run's HOT arrival at the current marker
+    /// (marker 0's hot arrival is the segment start). Null when no hot
+    /// observation is open — an unanchored resume after undo/skip.</summary>
+    public TimeSpan? CurrentHotArrival =>
+        open.TryGetValue((CurrentMarker, Variant.Hot), out var t) ? t : (TimeSpan?)null;
 }
