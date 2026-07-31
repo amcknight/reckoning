@@ -18,6 +18,23 @@ public class ReckoningComponentSettings : UserControl
     // SelectedIndex casts directly to the enum with no lookup table.
     private static readonly string[] AccuracyNames = Enum.GetNames(typeof(TimeAccuracy));
 
+    // Nothing sets Size on this UserControl, so LiveSplit's settings dialog
+    // (ComponentSettingsDialog) hosts it at the WinForms default 150x150,
+    // clipping most of the controls below. Stock components (including
+    // RunPredictionSettings, which this control was cloned from) size their
+    // settings UserControl explicitly instead of relying on layout to do it;
+    // nearly all of them — RunPredictionSettings, TimerSettings,
+    // WorldRecordSettings, etc. — use a 476px width, so match that convention
+    // here for a native look even though our content is much narrower.
+    private const int SettingsWidth = 476;
+
+    // Height = bottom edge of the last (bottom-most) child control, dotBox,
+    // plus the same 8px margin used for every control's Left/Top offset in
+    // this file (see the constructor below). dotBox.Top is 222; its AutoSize
+    // CheckBox height is 17 (matching stock's own AutoSize CheckBox height,
+    // e.g. RunPredictionSettings.Designer.cs's chkOverrideTextColor).
+    private const int SettingsHeight = 222 + 17 + 8; // = 247
+
     private readonly ComboBox comparisonBox;
     private readonly CheckBox overrideTextColorBox;
     private readonly Button textColorButton;
@@ -45,6 +62,12 @@ public class ReckoningComponentSettings : UserControl
 
     public ReckoningComponentSettings()
     {
+        // Explicit size — see SettingsWidth/SettingsHeight derivation above.
+        // Without this, LiveSplit's settings dialog renders the control at
+        // the WinForms default 150x150 and cuts off everything past the
+        // first couple of rows.
+        Size = new Size(SettingsWidth, SettingsHeight);
+
         var comparisonLabel = new Label { Text = "Comparison:", AutoSize = true, Left = 8, Top = 8 };
         comparisonBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = 8, Top = 24, Width = 320 };
 

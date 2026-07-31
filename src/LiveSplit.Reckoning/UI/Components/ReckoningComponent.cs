@@ -109,7 +109,11 @@ public class ReckoningComponent : IComponent
         }
     }
 
-    public string ComponentName => ComparisonNaming.GetDisplayedName(Settings.Comparison);
+    // Deviation from stock (which shows the comparison name here): the settings
+    // tab in the layout editor must be findable under one stable name, so this
+    // stays "Reckoning" regardless of comparison. The on-layout row label still
+    // follows the comparison via InformationName, set each frame in Update().
+    public string ComponentName => "Reckoning";
     public float VerticalHeight => internalComponent.VerticalHeight;
     public float MinimumHeight => internalComponent.MinimumHeight;
     // Widened by the dot gutter when the dot is shown, so the layout engine
