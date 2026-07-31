@@ -15,8 +15,12 @@ public class ComparisonNamingTests
         => Assert.Equal(expected, ComparisonNaming.GetDisplayedName(comparison));
 
     [Fact]
-    public void CustomComparisonGetsCurrentPaceParenthetical()
-        => Assert.Equal("Current Pace (My Comp)", ComparisonNaming.GetDisplayedName("My Comp"));
+    public void CustomComparisonShowsItsOwnName()
+        => Assert.Equal("My Comp", ComparisonNaming.GetDisplayedName("My Comp"));
+
+    [Fact]
+    public void CustomComparisonAbbreviatesToItsOwnShortName()
+        => Assert.Equal(new[] { "My Comp" }, ComparisonNaming.GetAbbreviations("My Comp"));
 
     [Fact]
     public void BestSegmentsAbbreviationsMatchStock()
