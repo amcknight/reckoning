@@ -25,8 +25,14 @@ public class ReckoningComponent : IComponent
     // be unobtrusive, large enough to read color at a glance.
     private const float StatusDotSizePx = 5f;
     // Matches SMWCounters' fixed dot position: pinned near the component's
-    // left edge, clear of the row padding so text never overlaps it.
+    // left edge.
     private const float StatusDotLeftPx = 3f;
+    // Width reserved on the left for the status dot when shown: the dot's own
+    // footprint plus a small gap. InfoTextComponent hard-codes its
+    // NameLabel.X at 5 in both the single-row and two-row draw paths and
+    // never applies our PaddingLeft as an X offset, so without this gutter
+    // the dot collides with the start of the name text.
+    private const float DotGutterPx = StatusDotLeftPx + StatusDotSizePx + 2f;   // 2f: breathing room before the name text starts
     // Unlearned values render in a fixed dim gray: legible on light and dark
     // layouts where alpha-dimming vanished into dark backgrounds (live-test 1).
     private static readonly Color UnlearnedColor = Color.Gray;
@@ -93,8 +99,11 @@ public class ReckoningComponent : IComponent
     public string ComponentName => ComparisonNaming.GetDisplayedName(Settings.Comparison);
     public float VerticalHeight => internalComponent.VerticalHeight;
     public float MinimumHeight => internalComponent.MinimumHeight;
-    public float HorizontalWidth => internalComponent.HorizontalWidth;
-    public float MinimumWidth => internalComponent.MinimumWidth;
+    // Widened by the dot gutter when the dot is shown, so the layout engine
+    // reserves enough horizontal room and the internal component's own
+    // content is never squeezed into (or under) the dot.
+    public float HorizontalWidth => internalComponent.HorizontalWidth + (Settings.ShowStatusDot ? DotGutterPx : 0f);
+    public float MinimumWidth => internalComponent.MinimumWidth + (Settings.ShowStatusDot ? DotGutterPx : 0f);
     public float PaddingTop => internalComponent.PaddingTop;
     public float PaddingBottom => internalComponent.PaddingBottom;
     public float PaddingLeft => internalComponent.PaddingLeft;
@@ -318,7 +327,22 @@ public class ReckoningComponent : IComponent
     {
         DrawBackground(g, state, width, VerticalHeight);
         PrepareDraw(state, LayoutMode.Vertical);
-        internalComponent.DrawVertical(g, state, width, clipRegion);
+        if (Settings.ShowStatusDot)
+        {
+            // Inset the internal component's whole draw into the gutter so
+            // its (hard-coded) name-label origin lands to the right of the
+            // dot instead of under it; the dot itself is drawn afterward, at
+            // full (untranslated) coordinates, in DrawOverlays.
+            var savedTransform = g.Save();
+            g.TranslateTransform(DotGutterPx, 0);
+            internalComponent.DrawVertical(g, state, Math.Max(0f, width - DotGutterPx), clipRegion);
+            g.Restore(savedTransform);
+        }
+        else
+        {
+            internalComponent.DrawVertical(g, state, width, clipRegion);
+        }
+
         DrawOverlays(g, state, width, VerticalHeight);
     }
 
@@ -326,7 +350,22 @@ public class ReckoningComponent : IComponent
     {
         DrawBackground(g, state, HorizontalWidth, height);
         PrepareDraw(state, LayoutMode.Horizontal);
-        internalComponent.DrawHorizontal(g, state, height, clipRegion);
+        if (Settings.ShowStatusDot)
+        {
+            // Same gutter inset as DrawVertical; HorizontalWidth is already
+            // widened by DotGutterPx above, so the internal component's own
+            // (unchanged) intrinsic width plus this translate exactly fills
+            // the advertised row width.
+            var savedTransform = g.Save();
+            g.TranslateTransform(DotGutterPx, 0);
+            internalComponent.DrawHorizontal(g, state, height, clipRegion);
+            g.Restore(savedTransform);
+        }
+        else
+        {
+            internalComponent.DrawHorizontal(g, state, height, clipRegion);
+        }
+
         DrawOverlays(g, state, HorizontalWidth, height);
     }
 
