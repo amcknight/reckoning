@@ -756,7 +756,9 @@ git add src/LiveSplit.Reckoning/UI/Components/ComparisonNaming.cs test/LiveSplit
 git commit -m "feat(ui): stock Run Prediction label tables"
 ```
 
----### Task 5: Settings clone (stock Run Prediction settings + status dot)
+---
+
+### Task 5: Settings clone (stock Run Prediction settings + status dot)
 
 Settings come before the component rewrite because the component consumes them. Mirror stock's fields, XML keys, and defaults exactly, plus our `ShowStatusDot`.
 
