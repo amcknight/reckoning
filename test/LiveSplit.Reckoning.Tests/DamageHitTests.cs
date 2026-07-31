@@ -28,16 +28,28 @@ public class DamageHitTests
     }
 
     [Fact]
-    public void FreezesAtRespawnThenFadesLinearly()
+    public void RespawnJumpIsCapturedThenAmountFreezes()
     {
         var hit = new DamageHit();
         hit.OnDeath(S(0));
-        hit.Update(S(22), nowMs: 0);
-        hit.OnRespawn(nowMs: 0);
-        hit.Update(S(30), nowMs: DamageHit.FadeDurationMs / 2);   // sunk keeps moving...
-        Assert.Equal(S(22), hit.Amount);                          // ...amount does not
+        hit.Update(S(3), nowMs: 0);            // grew a little pre-respawn
+        hit.OnRespawn();
+        hit.Update(S(22), nowMs: 100);         // re-anchor jump lands on THIS sample
+        Assert.Equal(S(22), hit.Amount);       // jump captured...
+        Assert.Equal(255, hit.Alpha(100));     // ...and fade starts here
+        hit.Update(S(30), nowMs: 200);
+        Assert.Equal(S(22), hit.Amount);       // ...then frozen
+    }
+
+    [Fact]
+    public void FadesLinearlyFromTheCapturingSample()
+    {
+        var hit = new DamageHit();
+        hit.OnDeath(S(0));
+        hit.OnRespawn();
+        hit.Update(S(22), nowMs: 0);           // capture + fade start at t=0
         int alpha = hit.Alpha(DamageHit.FadeDurationMs / 2);
-        Assert.InRange(alpha, 120, 135);                          // ~half faded
+        Assert.InRange(alpha, 120, 135);       // ~half faded
     }
 
     [Fact]
@@ -45,10 +57,25 @@ public class DamageHitTests
     {
         var hit = new DamageHit();
         hit.OnDeath(S(0));
-        hit.OnRespawn(nowMs: 0);
+        hit.OnRespawn();
+        hit.Update(S(5), nowMs: 0);            // capture + fade start
         hit.Update(S(5), nowMs: DamageHit.FadeDurationMs + 1);
         Assert.False(hit.Visible);
         Assert.Equal(0, hit.Alpha(DamageHit.FadeDurationMs + 1));
+    }
+
+    [Fact]
+    public void NullSunkAfterRespawnStillFreezesSoTheHitCannotLingerForever()
+    {
+        var hit = new DamageHit();
+        hit.OnDeath(S(0));
+        hit.Update(S(4), nowMs: 0);
+        hit.OnRespawn();
+        hit.Update(null, nowMs: 100);          // sunk unavailable: freeze anyway
+        hit.Update(S(90), nowMs: 200);
+        Assert.Equal(S(4), hit.Amount);        // pre-respawn amount kept
+        hit.Update(S(90), nowMs: 100 + DamageHit.FadeDurationMs + 1);
+        Assert.False(hit.Visible);
     }
 
     [Fact]
@@ -57,7 +84,7 @@ public class DamageHitTests
         var hit = new DamageHit();
         hit.OnDeath(S(0));
         hit.Update(S(22), 0);
-        hit.OnRespawn(0);
+        hit.OnRespawn();
         hit.OnDeath(S(22));                    // died again later in the segment
         hit.Update(S(30), 500);
         Assert.True(hit.Visible);

@@ -15,6 +15,7 @@ public sealed class DamageHit
     private bool active;
     private bool fading;           // respawn seen: amount frozen, fade running
     private long fadeStartMs;
+    private bool pendingFreeze;    // respawn seen: freeze on the next sample
 
     public bool Visible => active;
     public TimeSpan Amount { get; private set; }
@@ -30,22 +31,33 @@ public sealed class DamageHit
         Amount = TimeSpan.Zero;
         active = true;
         fading = false;
+        pendingFreeze = false;
     }
 
-    public void OnRespawn(long nowMs)
+    /// <summary>The re-anchor jump (arrival + best) is computed on the Update
+    /// AFTER the respawn event, so the freeze is deferred one sample — freezing
+    /// at the event itself would miss the death's real cost.</summary>
+    public void OnRespawn()
     {
-        if (!active || fading) return;
-        fading = true;
-        fadeStartMs = nowMs;
+        if (active && !fading) pendingFreeze = true;
     }
 
     public void Update(TimeSpan? sunkNow, long nowMs)
     {
         if (!active) return;
-        if (!fading && sunkNow is TimeSpan s)
+        if (!fading)
         {
-            var grown = s - baseline;
-            Amount = grown < TimeSpan.Zero ? TimeSpan.Zero : grown;
+            if (sunkNow is TimeSpan s)
+            {
+                var grown = s - baseline;
+                Amount = grown < TimeSpan.Zero ? TimeSpan.Zero : grown;
+            }
+            if (pendingFreeze)
+            {
+                fading = true;
+                fadeStartMs = nowMs;
+                pendingFreeze = false;
+            }
         }
         if (fading && nowMs - fadeStartMs >= FadeDurationMs) active = false;
     }

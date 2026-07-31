@@ -141,7 +141,7 @@ public class ReckoningComponent : IComponent
 
         if (tick.Death) { hit.OnDeath(lastComposed.Sunk); model.OnDeath(); }
         if (tick.Checkpoint) model.OnCheckpoint(elapsed);
-        if (tick.Respawn) { hit.OnRespawn(clock.ElapsedMilliseconds); model.OnRespawn(elapsed); }
+        if (tick.Respawn) { hit.OnRespawn(); model.OnRespawn(elapsed); }
     }
 
     private void Poll()
