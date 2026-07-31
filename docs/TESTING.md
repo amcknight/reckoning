@@ -61,7 +61,9 @@ comparison.
    estimate is bleeding — freezes just after respawn at this death's full
    cost (replay estimate + death→spawn downtime), then fades to invisible
    over ~2.5 s. The frozen number should roughly match a hand-count of
-   seconds lost to the death.
+   seconds lost to the death (unless you were ahead of the comparison — the
+   cushion absorbs part or all of it, same as the zero-amount rule in
+   step 4).
 4. **Learn it, then reuse it.** Touch a checkpoint, die, respawn, finish the
    segment, split, then **save the splits (Ctrl+S)**. Open
    `<splits>.lss.reckoning.json`: expect a hot AND a cold entry for that
@@ -69,7 +71,8 @@ comparison.
    again: the value now uses the learned cold best (no longer gray). The red
    hit reappears at the death and ticks 1:1 through the animation the same
    as a first death, then freezes just after respawn at the death's full
-   cost and fades. A hit whose amount comes out exactly zero (the model
+   cost — and the value itself stops ticking and holds at the re-anchored
+   estimate — then fades. A hit whose amount comes out exactly zero (the model
    absorbed the death entirely) is deliberately not drawn — a missing hit
    there is expected, not a bug.
 5. **Persistence is save-gated — including the exit path.** Split a few more

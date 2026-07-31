@@ -2,7 +2,13 @@ using System;
 
 namespace LiveSplit.Reckoning.Engine;
 
-public readonly record struct ComposedPrediction(TimeSpan? StockValue, TimeSpan? Value, TimeSpan? Sunk);
+public readonly record struct ComposedPrediction(
+    TimeSpan? StockValue,
+    TimeSpan? Value,
+    // No production consumers as of the death-cost hit (which baselines on
+    // Value instead) — kept as the diagnostic/v2 surface (death-aware minus
+    // stock); production display uses Value.
+    TimeSpan? Sunk);
 
 /// <summary>The stock Run Prediction running-phase formula, with an optional
 /// death-aware substitute for the live delta.

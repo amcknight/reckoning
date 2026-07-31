@@ -68,6 +68,13 @@ public class ReckoningComponent : IComponent
     private ComposedPrediction lastComposed;
     private bool lastUnlearned;
     private string previousInformationName;
+    // The hit's baseline (DamageHit.OnDeath's valueNow) is a value computed
+    // relative to whichever comparison/timing method was active at arm time;
+    // a mid-hit switch of either changes what "the value" even means and
+    // would present as a fake instantaneous jump in the drawn amount, so we
+    // track the pair here and clear the hit on any change.
+    private string lastHitComparison;
+    private TimingMethod lastHitTimingMethod;
 
     // Wall-clock (not Stopwatch) so both are directly comparable against
     // File.GetLastWriteTimeUtc in Dispose's exit-save race fix below.
@@ -208,6 +215,7 @@ public class ReckoningComponent : IComponent
 
     private void OnSplit(object sender, EventArgs e)
     {
+        hit.Clear();
         if (Elapsed() is TimeSpan t) lock (storeLock) { model.OnSplit(t); }
     }
 
@@ -217,7 +225,11 @@ public class ReckoningComponent : IComponent
         lock (storeLock) { model.OnUndoSplit(Elapsed() ?? TimeSpan.Zero); }
     }
 
-    private void OnSkipSplit(object sender, EventArgs e) => model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
+    private void OnSkipSplit(object sender, EventArgs e)
+    {
+        hit.Clear();
+        model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
+    }
 
     private void OnReset(object sender, TimerPhase phase)
     {
@@ -262,6 +274,12 @@ public class ReckoningComponent : IComponent
         }
 
         var method = state.CurrentTimingMethod;
+        // Baseline is comparison/method-relative (see field comment above) —
+        // clear before computing so a switch mid-hit never leaks a fake jump.
+        if (comparison != lastHitComparison || method != lastHitTimingMethod) hit.Clear();
+        lastHitComparison = comparison;
+        lastHitTimingMethod = method;
+
         lastComposed = default;
         lastUnlearned = false;
 
@@ -368,9 +386,21 @@ public class ReckoningComponent : IComponent
         // meaningless zero.
         if (hit.Visible && alpha > 0 && hit.Amount != TimeSpan.Zero)
         {
-            float valueWidth = g.MeasureString(internalComponent.InformationValue ?? "", state.LayoutSettings.TimesFont).Width;
+            // ValueLabel.ActualWidth (not a fresh g.MeasureString of its text)
+            // because it's monospace-aware — InfoTimeComponent.PrepareDraw sets
+            // ValueLabel.IsMonospaced, under which every digit occupies the '0'
+            // glyph's width, so ActualWidth stays stable tick to tick instead of
+            // drifting with which digits happen to be showing. Proportional
+            // measurement here would reopen the same jitter this fix removes
+            // from the hit label itself, just one frame removed.
+            float valueWidth = internalComponent.ValueLabel.ActualWidth;
             hitLabel.Text = TimeText.FormatHit(hit.Amount);
             hitLabel.Font = state.LayoutSettings.TimesFont;
+            // Matches InfoTimeComponent.ValueLabel: fixed per-digit glyph width
+            // ('0''s width) instead of proportional, so the ticking damage
+            // number doesn't jitter horizontally as its digits change every
+            // frame — the same reason LiveSplit's own time displays set this.
+            hitLabel.IsMonospaced = true;
             hitLabel.ForeColor = Color.FromArgb(alpha, HitColor);
             hitLabel.HasShadow = state.LayoutSettings.DropShadows;
             hitLabel.ShadowColor = state.LayoutSettings.ShadowsColor;

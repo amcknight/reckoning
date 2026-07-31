@@ -148,4 +148,17 @@ public class SegmentTrackerTests
         t.OnRespawn(TimeSpan.FromSeconds(130));
         Assert.Equal(TimeSpan.FromSeconds(130), t.CurrentArrival);   // fresh anchor
     }
+
+    [Fact]
+    public void SplitDuringDeathAnimationRecordsNoColdObservation()
+    {
+        var t = new SegmentTracker();
+        t.StartSegment(TimeSpan.Zero);
+        t.OnCheckpoint(TimeSpan.FromSeconds(20));
+        t.OnDeath();
+        t.OnRespawn(TimeSpan.FromSeconds(26));
+        t.OnDeath();                                        // dies again; split fires before respawn
+        var obs = t.CompleteSegment(TimeSpan.FromSeconds(70));
+        Assert.DoesNotContain(obs, o => o.Variant == Variant.Cold);
+    }
 }
