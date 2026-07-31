@@ -69,7 +69,9 @@ public class ReckoningComponent : IComponent
     }
 
     public string ComponentName => "Reckoning";
-    public float VerticalHeight => Settings.ShowSunkRow ? RowHeightPx * 2 : RowHeightPx;
+    // Temporary bridge (Task 5 dropped ShowSunkRow; Task 6 rewrites this
+    // against the stock Run Prediction layout): single row for now.
+    public float VerticalHeight => false ? RowHeightPx * 2 : RowHeightPx;
     public float MinimumHeight => VerticalHeight;
     public float HorizontalWidth => HorizontalWidthPx;
     public float MinimumWidth => MinimumWidthPx;
@@ -188,7 +190,7 @@ public class ReckoningComponent : IComponent
         cache["reckoning"] = lastResult?.Finish?.ToString() ?? "—";
         cache["sunk"] = "";
         cache["unlearned"] = lastResult?.Unlearned ?? false;
-        cache["sunkRow"] = Settings.ShowSunkRow;
+        cache["sunkRow"] = false;
         cache["dot"] = Settings.ShowStatusDot ? connection.DotColor.ToArgb() : 0;
         if (cache.HasChanged) invalidator?.Invalidate(0, 0, width, height);
     }
@@ -205,14 +207,14 @@ public class ReckoningComponent : IComponent
         var valueColor = (lastResult?.Unlearned ?? false)
             ? Color.FromArgb(UnlearnedValueAlpha, textColor)
             : textColor;
-        int rows = Settings.ShowSunkRow ? 2 : 1;
+        int rows = false ? 2 : 1;
         float rowHeight = height / rows;
 
         // Temporary bridge (Task 5 rewrites this against the stock Run
         // Prediction formula): displays only the death-aware finish estimate.
         DrawRow(g, state, 0, rowHeight, width, "Reckoning",
             lastResult?.Finish?.ToString() ?? "—", textColor, valueColor);
-        if (Settings.ShowSunkRow)
+        if (false)
         {
             DrawRow(g, state, 1, rowHeight, width, "Sunk",
                 "", textColor, valueColor);
