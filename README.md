@@ -15,30 +15,46 @@ position.
 
 ## Display
 
-Reckoning draws two rows in your layout:
+Reckoning works like LiveSplit's stock **Run Prediction** component for any
+comparison you pick — the label follows the comparison exactly like stock
+does ("Best Segments" → "Best Possible Time", "Current Comparison"/PB →
+"Current Pace", and so on), and deathless, its value matches a stock Run
+Prediction component set to the same comparison digit-for-digit.
 
-- **Reckoning** — the death-aware BPT: run elapsed so far, plus the best
-  known time from your current position (checkpoint or segment start) to the
-  segment exit, plus the best known time for every full segment still ahead.
-  Right after a death this prices from your *cold* best at the last
-  checkpoint touched; if you then reach a further checkpoint alive, it
-  prices from *hot* bests again — only Sunk keeps the death's cost on the
-  books. Before any death in the segment it's identical to standard BPT.
-- **Sunk** — how much time this segment's deaths have irrevocably cost,
-  i.e. Reckoning minus standard BPT. Zero while the segment stays deathless.
+Death-awareness is layered on top as a live delta: after a death, the
+predicted finish for the *current split* is repriced from your learned
+recovery pace (hot or cold) at the checkpoint or segment start you're
+recovering from, which can raise the prediction above what stock alone would
+show. Reach a further checkpoint alive and pricing flips back to hot bests.
+While the segment stays deathless the death-aware term is zero by
+construction, so there's nothing to distinguish from stock.
 
-An unlearned row (no recorded time yet for the current marker/variant, so
-Reckoning had to fall back toward a coarser estimate) is flagged visually
-rather than silently shown as if it were solid data.
+There's no separate "Sunk" row. Instead, a death shows as a transient red
+damage number to the left of the value (e.g. `-22.4`) that grows while the
+death animation plays, freezes the instant you respawn, then fades out over
+about 2.5 seconds. Deathless, nothing is drawn there at all.
+
+An unlearned estimate (no recorded time yet for the current checkpoint/
+variant, so Reckoning had to fall back toward a coarser estimate) renders in
+a fixed gray rather than the normal text color, so it reads as provisional
+rather than as solid data.
 
 ## Settings
 
-Configure via the component's settings in LiveSplit's layout editor:
+Configure via the component's settings in LiveSplit's layout editor — the
+surface is a full clone of stock Run Prediction's, plus one Reckoning-only
+toggle:
 
-- **Show Sunk row** — toggles the second row (default: on).
-- **Show connection status dot** — toggles the status dot (default: on).
-- **Accuracy** — time precision for both rows: Seconds, Tenths, or
-  Hundredths (default: Tenths).
+- **Comparison** — which comparison to predict against (default: Current
+  Comparison). Everything else — label, value, and formula — follows this
+  pick exactly like stock Run Prediction.
+- **Override text color / time color**, **Background** (color + gradient) —
+  same as stock.
+- **Accuracy** — Seconds, Tenths, Hundredths, or Milliseconds (default:
+  Seconds).
+- **Display 2 rows** — stock's compact/expanded layout toggle.
+- **Show connection status dot** — Reckoning-only; toggles the status dot
+  (default: on).
 
 ## Install
 
@@ -61,9 +77,14 @@ to a sidecar JSON file next to your splits file: `<splits>.lss.reckoning.json`.
 Bests are tracked per splits file, per segment, per marker (checkpoint index
 within the segment), and separately for the **hot** (reached alive) and
 **cold** (reached after respawning there) variants, since post-death times
-from a checkpoint are typically slower than a clean pass. The sidecar is
-safe to delete at any time — Reckoning relearns from scratch on the next run
-and never crashes if it's missing or corrupt.
+from a checkpoint are typically slower than a clean pass.
+
+The sidecar is written only when you save your splits file (Ctrl+S, or the
+save prompt on exit) — the same way LiveSplit only keeps golds you've saved.
+Splitting alone does not persist anything; closing LiveSplit without saving
+splits discards that session's learning. The sidecar is safe to delete at
+any time — Reckoning relearns from scratch on the next run and never crashes
+if it's missing or corrupt.
 
 ## Status dot
 
