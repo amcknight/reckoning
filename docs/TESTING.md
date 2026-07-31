@@ -1,7 +1,7 @@
 # Reckoning — live testing & iteration guide
 
 Written at v1 wrap-up (2026-07-30), updated through the Run Prediction
-rebase and the 2026-07-31 priors/hit fixes. The unit suite (117 tests)
+rebase and the 2026-07-31 priors/hit fixes. The unit suite (119 tests)
 covers the calc engine, watcher semantics, persistence, and formatting.
 Andrew has now run this live once — that session produced the fixes in
 `docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md` — but the
