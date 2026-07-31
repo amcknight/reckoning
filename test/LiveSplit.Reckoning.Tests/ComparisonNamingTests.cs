@@ -26,4 +26,14 @@ public class ComparisonNamingTests
     public void BestSegmentsAbbreviationsMatchStock()
         => Assert.Equal(new[] { "Best Poss. Time", "Best Time", "BPT" },
             ComparisonNaming.GetAbbreviations("Best Segments"));
+
+    [Theory]
+    [InlineData("Best Segments", false)]
+    [InlineData("Worst Segments", false)]
+    [InlineData("Average Segments", false)]
+    [InlineData("Current Comparison", true)]
+    [InlineData("Personal Best", true)]
+    [InlineData("My Comp", true)]
+    public void IsPaceLikeMatchesStockCurrentPaceGate(string comparison, bool expected)
+        => Assert.Equal(expected, ComparisonNaming.IsPaceLike(comparison));
 }

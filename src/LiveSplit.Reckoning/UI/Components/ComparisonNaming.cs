@@ -28,4 +28,18 @@ internal static class ComparisonNaming
         Run.PersonalBestComparisonName => new[] { "Cur. Pace", "Pace" },
         _ => new[] { CompositeComparisons.GetShortComparisonName(comparison) },
     };
+
+    /// <summary>Stock RunPrediction gates "show blank before the run starts" on the displayed
+    /// name starting with "Current Pace" — true for Current Comparison, Personal Best, and any
+    /// unmapped/custom comparison, false for the three Segments generators. Our display strings
+    /// deviate from stock's (unmapped comparisons show their own name, not "Current Pace (name)"),
+    /// so that string check no longer selects the right set. This reproduces the same semantic
+    /// membership test directly against the comparison, decoupled from the display string.</summary>
+    internal static bool IsPaceLike(string comparison) => comparison switch
+    {
+        BestSegmentsComparisonGenerator.ComparisonName => false,
+        WorstSegmentsComparisonGenerator.ComparisonName => false,
+        AverageSegmentsComparisonGenerator.ComparisonName => false,
+        _ => true,
+    };
 }

@@ -258,7 +258,7 @@ public class ReckoningComponent : IComponent
         lastComposed = default;
         lastUnlearned = false;
 
-        if (internalComponent.InformationName.StartsWith("Current Pace") && state.CurrentPhase == TimerPhase.NotRunning)
+        if (ComparisonNaming.IsPaceLike(comparison) && state.CurrentPhase == TimerPhase.NotRunning)
         {
             internalComponent.TimeValue = null;
         }
