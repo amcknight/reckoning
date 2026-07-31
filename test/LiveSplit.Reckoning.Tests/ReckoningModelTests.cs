@@ -115,8 +115,8 @@ public class ReckoningModelTests
         m.OnCheckpoint(S(110));
         m.OnDeath();
         var r = m.Compute(S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200));
-        Assert.Equal(S(140 + 22 + 200), r.DrBpt);
+            currentSegmentFullBest: S(30));
+        Assert.Equal(S(140 + 22), r.Finish);
         Assert.Equal(BestSource.ColdBest, r.Source);
     }
 
@@ -171,8 +171,8 @@ public class ReckoningModelTests
         m.OnRespawn(S(10));
         m.OnCheckpoint(S(30));       // reached checkpoint alive: hot at marker 1
         var r = m.Compute(S(40), segmentStartElapsed: S(0),
-            currentSegmentFullBest: S(50), remainingFullBestsSum: S(100));
-        Assert.Equal(S(30 + 18 + 100), r.DrBpt);
+            currentSegmentFullBest: S(50));
+        Assert.Equal(S(30 + 18), r.Finish);
         Assert.Equal(BestSource.HotBest, r.Source);
         Assert.False(r.Unlearned);
     }

@@ -18,190 +18,80 @@ public class ReckoningCalculatorTests
         };
 
     [Fact]
-    public void DeathlessEqualsStandardBptWithZeroSunk()
+    public void DeathlessReturnsNull_StockFormulaApplies()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(100), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: false, currentMarker: 1,
-            currentVariant: Variant.Hot, situationArrivalElapsed: null,
-            markerBest: Bests((1, Variant.Hot, 10)));
-        Assert.Equal(S(90 + 30 + 200), r.DrBpt);   // marker data ignored while deathless
-        Assert.Equal(TimeSpan.Zero, r.Sunk);
-        Assert.False(r.Unlearned);
-        Assert.Equal(BestSource.StandardBpt, r.Source);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(100), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: false, currentMarker: 1, currentVariant: Variant.Hot,
+            situationArrivalElapsed: null, markerBest: Bests((1, Variant.Hot, 10)));
+        Assert.Null(p);
     }
 
     [Fact]
-    public void DeathlessClampsToElapsedWhenBehindBestSegment()
+    public void AfterDeathUsesLearnedBestAnchoredAtArrival()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(130), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: false, currentMarker: 0,
-            currentVariant: Variant.Hot, situationArrivalElapsed: null,
-            markerBest: NoBests);
-        Assert.Equal(S(130 + 200), r.DrBpt);   // max(90+30, 130) = 130
-        Assert.Equal(TimeSpan.Zero, r.Sunk);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(150), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
+            situationArrivalElapsed: S(140), markerBest: Bests((1, Variant.Cold, 22)));
+        Assert.Equal(S(140 + 22), p.Finish);   // anchored at arrival, not at elapsed=150
+        Assert.False(p.Unlearned);
+        Assert.Equal(BestSource.ColdBest, p.Source);
     }
 
     [Fact]
-    public void AfterDeathUsesColdBestFromCurrentMarker()
+    public void AfterDeathClampsToElapsedWhenBehindLearnedPace()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-            markerBest: Bests((1, Variant.Cold, 22), (1, Variant.Hot, 18)));
-        Assert.Equal(S(140 + 22 + 200), r.DrBpt);
-        // standard = max(90+30, 140) + 200 = 340 ; sunk = 362 - 340
-        Assert.Equal(S(22), r.Sunk);
-        Assert.False(r.Unlearned);
-        Assert.Equal(BestSource.ColdBest, r.Source);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(170), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
+            situationArrivalElapsed: S(140), markerBest: Bests((1, Variant.Cold, 22)));
+        Assert.Equal(S(170), p.Finish);   // max(140+22, 170)
     }
 
     [Fact]
-    public void MissingColdFallsBackToHotFlaggedUnlearned()
+    public void PreRespawnAnchorsAtElapsedSoEstimateRises()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-            markerBest: Bests((1, Variant.Hot, 18)));
-        Assert.Equal(S(140 + 18 + 200), r.DrBpt);
-        Assert.True(r.Unlearned);
-        Assert.Equal(BestSource.HotBest, r.Source);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(145), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
+            situationArrivalElapsed: null, markerBest: Bests((1, Variant.Cold, 22)));
+        Assert.Equal(S(145 + 22), p.Finish);   // no anchor yet: time is bleeding
     }
 
     [Fact]
-    public void NoMarkerDataDegradesToStandardBptFlaggedUnlearned()
+    public void FallsBackToOtherVariantFlaggedUnlearned()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-            markerBest: NoBests);
-        Assert.Equal(S(140 + 200), r.DrBpt);   // max(120, 140) + 200
-        Assert.Equal(TimeSpan.Zero, r.Sunk);   // identical to standard by definition
-        Assert.True(r.Unlearned);
-        Assert.Equal(BestSource.StandardBpt, r.Source);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
+            situationArrivalElapsed: S(140), markerBest: Bests((1, Variant.Hot, 18)));
+        Assert.Equal(S(140 + 18), p.Finish);
+        Assert.True(p.Unlearned);
+        Assert.Equal(BestSource.HotBest, p.Source);
     }
 
     [Fact]
-    public void NullBestSegmentMakesResultNull()
+    public void FallsBackToSegmentGoldWhenNoMarkerData()
     {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: null, remainingFullBestsSum: S(200),
-            diedThisSegment: false, currentMarker: 0,
-            currentVariant: Variant.Hot, situationArrivalElapsed: null,
-            markerBest: NoBests);
-        Assert.Null(r.DrBpt);
-        Assert.Null(r.Sunk);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
+            diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
+            situationArrivalElapsed: S(135), markerBest: NoBests);
+        Assert.Equal(S(140), p.Finish);   // max(90+30, 140) = elapsed
+        Assert.True(p.Unlearned);
+        Assert.Equal(BestSource.StandardBpt, p.Source);
     }
 
     [Fact]
-    public void ColdBestStillWorksWhenLiveSplitBestsMissing()
+    public void NoDataAtAllYieldsNullFinishUnlearned()
     {
-        // Learned cold data answers even when LiveSplit has no best segment yet,
-        // but Sunk needs standard BPT so it stays null.
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: null, remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 0,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-            markerBest: Bests((0, Variant.Cold, 25)));
-        Assert.Equal(S(140 + 25 + 200), r.DrBpt);
-        Assert.Null(r.Sunk);
-        Assert.Equal(BestSource.ColdBest, r.Source);
-    }
-
-    [Fact]
-    public void NullRemainingSumMakesResultNull()
-    {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(140), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: null,
-            diedThisSegment: true, currentMarker: 0,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-            markerBest: Bests((0, Variant.Cold, 25)));
-        Assert.Null(r.DrBpt);
-        Assert.Null(r.Sunk);
-    }
-
-    [Fact]
-    public void LastSegmentUsesZeroRemainingSum()
-    {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(300), segmentStartElapsed: S(280),
-            currentSegmentFullBest: S(40), remainingFullBestsSum: TimeSpan.Zero,
-            diedThisSegment: true, currentMarker: 0,
-            currentVariant: Variant.Cold, situationArrivalElapsed: S(300),
-            markerBest: Bests((0, Variant.Cold, 35)));
-        Assert.Equal(S(335), r.DrBpt);
-        Assert.Equal(S(335 - 320), r.Sunk);    // standard = max(320, 300) = 320
-    }
-
-    [Fact]
-    public void PostRespawnDrBptDoesNotRampWithElapsed()
-    {
-        (TimeSpan Elapsed, TimeSpan Expected)[] cases =
-        {
-            (S(150), S(140 + 22 + 200)),
-            (S(160), S(140 + 22 + 200)),
-        };
-        foreach (var (elapsed, expected) in cases)
-        {
-            var r = ReckoningCalculator.Compute(
-                elapsed: elapsed, segmentStartElapsed: S(90),
-                currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-                diedThisSegment: true, currentMarker: 1,
-                currentVariant: Variant.Cold, situationArrivalElapsed: S(140),
-                markerBest: Bests((1, Variant.Cold, 22), (1, Variant.Hot, 18)));
-            Assert.Equal(expected, r.DrBpt);
-        }
-    }
-
-    [Fact]
-    public void HotSituationAfterDeathPrefersHotBest()
-    {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(160), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Hot, situationArrivalElapsed: S(150),
-            markerBest: Bests((1, Variant.Hot, 18), (1, Variant.Cold, 22)));
-        Assert.Equal(S(150 + 18 + 200), r.DrBpt);
-        Assert.Equal(BestSource.HotBest, r.Source);
-        Assert.False(r.Unlearned);
-    }
-
-    [Fact]
-    public void HotSituationMissingHotFallsBackToColdUnlearned()
-    {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(160), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Hot, situationArrivalElapsed: S(150),
-            markerBest: Bests((1, Variant.Cold, 22)));
-        Assert.Equal(S(150 + 22 + 200), r.DrBpt);
-        Assert.Equal(BestSource.ColdBest, r.Source);
-        Assert.True(r.Unlearned);
-    }
-
-    [Fact]
-    public void BeforeRespawnAnchorIsElapsed()
-    {
-        var r = ReckoningCalculator.Compute(
-            elapsed: S(145), segmentStartElapsed: S(90),
-            currentSegmentFullBest: S(30), remainingFullBestsSum: S(200),
-            diedThisSegment: true, currentMarker: 1,
-            currentVariant: Variant.Cold, situationArrivalElapsed: null,
-            markerBest: Bests((1, Variant.Cold, 22)));
-        Assert.Equal(S(145 + 22 + 200), r.DrBpt);
+        var p = ReckoningCalculator.PredictFinish(
+            elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: null,
+            diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
+            situationArrivalElapsed: S(135), markerBest: NoBests);
+        Assert.NotNull(p);
+        Assert.Null(p.Finish);
+        Assert.True(p.Unlearned);
     }
 }

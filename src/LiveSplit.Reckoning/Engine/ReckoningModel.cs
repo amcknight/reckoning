@@ -86,15 +86,16 @@ public sealed class ReckoningModel
         CurrentSegmentIndex = 0;
     }
 
-    public ReckoningResult Compute(
+    /// <summary>Death-aware prediction of the current split's finish, or null
+    /// while deathless (stock formula applies untouched).</summary>
+    public SituationPrediction Compute(
         TimeSpan elapsed,
         TimeSpan segmentStartElapsed,
-        TimeSpan? currentSegmentFullBest,
-        TimeSpan? remainingFullBestsSum)
+        TimeSpan? currentSegmentFullBest)
     {
         int segment = CurrentSegmentIndex;
-        return ReckoningCalculator.Compute(
-            elapsed, segmentStartElapsed, currentSegmentFullBest, remainingFullBestsSum,
+        return ReckoningCalculator.PredictFinish(
+            elapsed, segmentStartElapsed, currentSegmentFullBest,
             tracker.DiedThisSegment, tracker.CurrentMarker, tracker.CurrentVariant, tracker.CurrentArrival,
             (marker, variant) => store.TryGetBest(segment, marker, variant, out var b) ? b : null);
     }

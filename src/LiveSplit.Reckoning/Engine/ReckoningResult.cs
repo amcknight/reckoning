@@ -10,4 +10,7 @@ public enum BestSource
     HotBest,
 }
 
-public sealed record ReckoningResult(TimeSpan? DrBpt, TimeSpan? Sunk, bool Unlearned, BestSource Source);
+/// <summary>Death-aware prediction of the current split's finish time
+/// (run-elapsed). Null Finish: died, but no estimate is available — the
+/// display falls back to the stock value, flagged unlearned.</summary>
+public sealed record SituationPrediction(TimeSpan? Finish, bool Unlearned, BestSource Source);

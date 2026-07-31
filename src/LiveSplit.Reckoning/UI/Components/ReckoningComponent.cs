@@ -50,7 +50,7 @@ public class ReckoningComponent : IComponent
     private ReckoningModel model;
     private string loadedLssPath;
     private int lastGeneration = -1;
-    private ReckoningResult lastResult = new(null, null, false, BestSource.StandardBpt);
+    private SituationPrediction lastResult;
 
     public ReckoningComponentSettings Settings { get; } = new();
 
@@ -151,7 +151,7 @@ public class ReckoningComponent : IComponent
     private void OnSkipSplit(object sender, EventArgs e) => model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
     private void OnReset(object sender, TimerPhase phase) => model.OnReset();
 
-    private ReckoningResult ComputeNow()
+    private SituationPrediction ComputeNow()
     {
         // Upper bound mirrors LiveSplit's own CurrentSplit accessor: after the
         // final split, CurrentSplitIndex == Run.Count (phase Ended) while the
@@ -160,7 +160,7 @@ public class ReckoningComponent : IComponent
         if (!model.IsRunning
             || state.CurrentSplitIndex < 0 || state.CurrentSplitIndex >= state.Run.Count
             || Elapsed() is not TimeSpan elapsed)
-            return new ReckoningResult(null, null, false, BestSource.StandardBpt);
+            return null;
 
         var method = state.CurrentTimingMethod;
         int index = state.CurrentSplitIndex;
@@ -173,14 +173,8 @@ public class ReckoningComponent : IComponent
         }
 
         TimeSpan? fullBest = state.Run[index].BestSegmentTime[method];
-        TimeSpan? remaining = TimeSpan.Zero;
-        for (int i = index + 1; i < state.Run.Count; i++)
-        {
-            if (state.Run[i].BestSegmentTime[method] is TimeSpan b) remaining += b;
-            else { remaining = null; break; }
-        }
 
-        return model.Compute(elapsed, segmentStart, fullBest, remaining);
+        return model.Compute(elapsed, segmentStart, fullBest);
     }
 
     public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
@@ -189,9 +183,11 @@ public class ReckoningComponent : IComponent
         lastResult = ComputeNow();
 
         cache.Restart();
-        cache["reckoning"] = TimeText.Format(lastResult.DrBpt, Settings.Accuracy);
-        cache["sunk"] = TimeText.FormatSunk(lastResult.Sunk, Settings.Accuracy);
-        cache["unlearned"] = lastResult.Unlearned;
+        // Temporary bridge (Task 5 rewrites this against the stock Run
+        // Prediction formula): displays only the death-aware finish estimate.
+        cache["reckoning"] = lastResult?.Finish?.ToString() ?? "—";
+        cache["sunk"] = "";
+        cache["unlearned"] = lastResult?.Unlearned ?? false;
         cache["sunkRow"] = Settings.ShowSunkRow;
         cache["dot"] = Settings.ShowStatusDot ? connection.DotColor.ToArgb() : 0;
         if (cache.HasChanged) invalidator?.Invalidate(0, 0, width, height);
@@ -206,18 +202,20 @@ public class ReckoningComponent : IComponent
     private void DrawGeneral(Graphics g, LiveSplitState state, float width, float height)
     {
         var textColor = state.LayoutSettings.TextColor;
-        var valueColor = lastResult.Unlearned
+        var valueColor = (lastResult?.Unlearned ?? false)
             ? Color.FromArgb(UnlearnedValueAlpha, textColor)
             : textColor;
         int rows = Settings.ShowSunkRow ? 2 : 1;
         float rowHeight = height / rows;
 
+        // Temporary bridge (Task 5 rewrites this against the stock Run
+        // Prediction formula): displays only the death-aware finish estimate.
         DrawRow(g, state, 0, rowHeight, width, "Reckoning",
-            TimeText.Format(lastResult.DrBpt, Settings.Accuracy), textColor, valueColor);
+            lastResult?.Finish?.ToString() ?? "—", textColor, valueColor);
         if (Settings.ShowSunkRow)
         {
             DrawRow(g, state, 1, rowHeight, width, "Sunk",
-                TimeText.FormatSunk(lastResult.Sunk, Settings.Accuracy), textColor, valueColor);
+                "", textColor, valueColor);
         }
 
         if (Settings.ShowStatusDot)
