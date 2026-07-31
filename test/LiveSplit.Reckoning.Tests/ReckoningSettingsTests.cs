@@ -72,4 +72,26 @@ public class ReckoningSettingsTests
             "BackgroundGradient", "Accuracy", "Display2Rows", "ShowStatusDot" })
             Assert.NotNull(node[key]);
     }
+
+    [Fact]
+    public void GarbageAccuracyFallsBackToDefault()
+    {
+        var doc = new XmlDocument();
+        var node = new ReckoningComponentSettings().GetSettings(doc);
+        node["Accuracy"].InnerText = "Garbage";
+        var fresh = new ReckoningComponentSettings();
+        fresh.SetSettings(node);
+        Assert.Equal(TimeAccuracy.Seconds, fresh.Accuracy);
+    }
+
+    [Fact]
+    public void GarbageBackgroundGradientFallsBackToDefault()
+    {
+        var doc = new XmlDocument();
+        var node = new ReckoningComponentSettings().GetSettings(doc);
+        node["BackgroundGradient"].InnerText = "Garbage";
+        var fresh = new ReckoningComponentSettings();
+        fresh.SetSettings(node);
+        Assert.Equal(GradientType.Plain, fresh.BackgroundGradient);
+    }
 }

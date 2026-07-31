@@ -201,11 +201,21 @@ public class ReckoningComponentSettings : UserControl
         TimeColor = SettingsHelper.ParseColor(settings["TimeColor"], Color.FromArgb(255, 255, 255));
         BackgroundColor = SettingsHelper.ParseColor(settings["BackgroundColor"], Color.Transparent);
         BackgroundColor2 = SettingsHelper.ParseColor(settings["BackgroundColor2"], Color.Transparent);
-        BackgroundGradient = SettingsHelper.ParseEnum(settings["BackgroundGradient"], GradientType.Plain);
-        Accuracy = SettingsHelper.ParseEnum(settings["Accuracy"], TimeAccuracy.Seconds);
+        BackgroundGradient = ParseEnumOrDefault(settings["BackgroundGradient"], GradientType.Plain);
+        Accuracy = ParseEnumOrDefault(settings["Accuracy"], TimeAccuracy.Seconds);
         Display2Rows = SettingsHelper.ParseBool(settings["Display2Rows"], false);
         ShowStatusDot = SettingsHelper.ParseBool(settings["ShowStatusDot"], true);
         if (IsHandleCreated) ModelToView();
+    }
+
+    // Unlike SettingsHelper.ParseEnum (which throws Enum.Parse's exception on
+    // an invalid-but-present value), this falls back to the default for both
+    // a missing element and a corrupted/hand-edited one — a bad enum string
+    // in a saved layout must never crash settings load.
+    private static T ParseEnumOrDefault<T>(XmlElement element, T defaultValue) where T : struct
+    {
+        SettingsHelper.TryParseEnum(element, out T result, defaultValue);
+        return result;
     }
 
     public int GetSettingsHashCode()
