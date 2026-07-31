@@ -54,6 +54,12 @@ public class ReckoningComponent : IComponent
     private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
     private readonly SimpleLabel hitLabel = new();
 
+    private readonly SplitsSaveWatcher saveWatcher;
+    // Guards store/model against a torn read/write: SaveSidecar can now run
+    // on the watcher's threadpool thread while ReloadSidecarIfPathChanged and
+    // the split handlers mutate the same fields on the UI thread.
+    private readonly object storeLock = new();
+
     private BestsStore store = new();
     private ReckoningModel model;
     private string loadedLssPath;
@@ -68,6 +74,7 @@ public class ReckoningComponent : IComponent
     {
         this.state = state;
         model = new ReckoningModel(store);
+        saveWatcher = new SplitsSaveWatcher(SaveSidecar);
         formatter = new SplitTimeFormatter(Settings.Accuracy);
         internalComponent = new InfoTimeComponent(null, null, formatter);
         Settings.CurrentState = state;
@@ -145,20 +152,32 @@ public class ReckoningComponent : IComponent
     {
         string lss = state.Run.FilePath;
         if (lss == loadedLssPath) return;
-        loadedLssPath = lss;
-        store = string.IsNullOrEmpty(lss) ? new BestsStore() : SidecarStore.Load(SidecarStore.PathFor(lss));
-        model = new ReckoningModel(store);
+        // Disk load happens outside the lock (nothing published yet to race
+        // on); loadedLssPath and store/model are then swapped together under
+        // the lock so a concurrent watcher-thread SaveSidecar can never read
+        // one half-updated (e.g. the new path paired with the old store).
+        var loaded = string.IsNullOrEmpty(lss) ? new BestsStore() : SidecarStore.Load(SidecarStore.PathFor(lss));
+        lock (storeLock)
+        {
+            loadedLssPath = lss;
+            store = loaded;
+            model = new ReckoningModel(store);
+        }
+        saveWatcher.WatchPath(lss);
     }
 
     private void SaveSidecar()
     {
-        string lss = loadedLssPath;
-        if (string.IsNullOrEmpty(lss)) return;
         try
         {
-            SidecarStore.Save(SidecarStore.PathFor(lss), store, lss,
-                state.Run.GameName, state.Run.CategoryName,
-                state.Run.Select(seg => seg.Name).ToList());
+            lock (storeLock)
+            {
+                string lss = loadedLssPath;
+                if (string.IsNullOrEmpty(lss)) return;
+                SidecarStore.Save(SidecarStore.PathFor(lss), store, lss,
+                    state.Run.GameName, state.Run.CategoryName,
+                    state.Run.Select(seg => seg.Name).ToList());
+            }
         }
         catch
         {
@@ -175,14 +194,13 @@ public class ReckoningComponent : IComponent
 
     private void OnSplit(object sender, EventArgs e)
     {
-        if (Elapsed() is TimeSpan t) model.OnSplit(t);
-        SaveSidecar();
+        if (Elapsed() is TimeSpan t) lock (storeLock) { model.OnSplit(t); }
     }
 
     private void OnUndoSplit(object sender, EventArgs e)
     {
         hit.Clear();
-        model.OnUndoSplit(Elapsed() ?? TimeSpan.Zero);
+        lock (storeLock) { model.OnUndoSplit(Elapsed() ?? TimeSpan.Zero); }
     }
 
     private void OnSkipSplit(object sender, EventArgs e) => model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
@@ -376,7 +394,9 @@ public class ReckoningComponent : IComponent
 
     public void Dispose()
     {
-        SaveSidecar();   // spec: persist on LiveSplit shutdown too
+        // No SaveSidecar() here: closing without saving splits must discard
+        // the session's learning, exactly like an unsaved gold.
+        saveWatcher.Dispose();
         pollTimer.Dispose();
         state.OnStart -= OnStart;
         state.OnSplit -= OnSplit;
