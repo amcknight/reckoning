@@ -119,33 +119,17 @@ public class ReckoningComponentSettings : UserControl
             OverrideTextColor = overrideTextColorBox.Checked;
             textColorButton.Enabled = OverrideTextColor;
         };
-        textColorButton.Click += (_, _) =>
-        {
-            SettingsHelper.ColorButtonClick(textColorButton, this);
-            TextColor = textColorButton.BackColor;
-        };
+        WireColorButton(textColorButton, c => TextColor = c);
 
         overrideTimeColorBox.CheckedChanged += (_, _) =>
         {
             OverrideTimeColor = overrideTimeColorBox.Checked;
             timeColorButton.Enabled = OverrideTimeColor;
         };
-        timeColorButton.Click += (_, _) =>
-        {
-            SettingsHelper.ColorButtonClick(timeColorButton, this);
-            TimeColor = timeColorButton.BackColor;
-        };
+        WireColorButton(timeColorButton, c => TimeColor = c);
 
-        backgroundColorButton.Click += (_, _) =>
-        {
-            SettingsHelper.ColorButtonClick(backgroundColorButton, this);
-            BackgroundColor = backgroundColorButton.BackColor;
-        };
-        backgroundColor2Button.Click += (_, _) =>
-        {
-            SettingsHelper.ColorButtonClick(backgroundColor2Button, this);
-            BackgroundColor2 = backgroundColor2Button.BackColor;
-        };
+        WireColorButton(backgroundColorButton, c => BackgroundColor = c);
+        WireColorButton(backgroundColor2Button, c => BackgroundColor2 = c);
         gradientBox.SelectedIndexChanged += (_, _) =>
             BackgroundGradient = (GradientType)Enum.Parse(typeof(GradientType), (string)gradientBox.SelectedItem);
 
@@ -157,6 +141,12 @@ public class ReckoningComponentSettings : UserControl
         // right even before a Load event fires (e.g. hosted in a designer).
         ModelToView();
     }
+
+    // Shared by all four stock-cloned color-button Click handlers: pop the
+    // stock color dialog, then push the chosen color into the given model
+    // property.
+    private void WireColorButton(Button button, Action<Color> apply) =>
+        button.Click += (_, _) => { SettingsHelper.ColorButtonClick(button, this); apply(button.BackColor); };
 
     private void PopulateComparisons()
     {

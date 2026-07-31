@@ -119,8 +119,11 @@ public class ReckoningComponent : IComponent
     // Widened by the dot gutter when the dot is shown, so the layout engine
     // reserves enough horizontal room and the internal component's own
     // content is never squeezed into (or under) the dot.
-    public float HorizontalWidth => internalComponent.HorizontalWidth + (Settings.ShowStatusDot ? DotGutterPx : 0f);
-    public float MinimumWidth => internalComponent.MinimumWidth + (Settings.ShowStatusDot ? DotGutterPx : 0f);
+    public float HorizontalWidth => internalComponent.HorizontalWidth + DotGutter;
+    public float MinimumWidth => internalComponent.MinimumWidth + DotGutter;
+    // Width actually reserved this frame: DotGutterPx when the dot is shown,
+    // zero otherwise. Shared by the width properties above and by DrawInset.
+    private float DotGutter => Settings.ShowStatusDot ? DotGutterPx : 0f;
     public float PaddingTop => internalComponent.PaddingTop;
     public float PaddingBottom => internalComponent.PaddingBottom;
     public float PaddingLeft => internalComponent.PaddingLeft;
@@ -310,7 +313,7 @@ public class ReckoningComponent : IComponent
         internalComponent.Update(invalidator, state, width, height, mode);
     }
 
-    private void PrepareDraw(LiveSplitState state, LayoutMode mode)
+    private void PrepareDraw(LiveSplitState state)
     {
         // Ported from LiveSplit's RunPrediction component (MIT).
         internalComponent.DisplayTwoRows = Settings.Display2Rows;
@@ -339,6 +342,21 @@ public class ReckoningComponent : IComponent
                         : Settings.BackgroundColor2);
             g.FillRectangle(gradientBrush, 0, 0, width, height);
         }
+    }
+
+    // Draws the internal component, inset into the dot gutter when the dot is
+    // shown, so its (hard-coded) name-label origin lands to the right of the
+    // dot instead of under it; the dot itself is drawn afterward, at full
+    // (untranslated) coordinates, in DrawOverlays.
+    private void DrawInset(Graphics g, Action<float> draw)
+    {
+        if (!Settings.ShowStatusDot) { draw(0f); return; }
+        var saved = g.Save();
+        // Must restore even if the internal draw throws, or every subsequent
+        // frame (including DrawOverlays below) inherits a stale translated
+        // origin instead of the untranslated one it expects.
+        try { g.TranslateTransform(DotGutterPx, 0); draw(DotGutterPx); }
+        finally { g.Restore(saved); }
     }
 
     private void DrawOverlays(Graphics g, LiveSplitState state, float width, float height)
@@ -378,65 +396,19 @@ public class ReckoningComponent : IComponent
     public void DrawVertical(Graphics g, LiveSplitState state, float width, Region clipRegion)
     {
         DrawBackground(g, state, width, VerticalHeight);
-        PrepareDraw(state, LayoutMode.Vertical);
-        if (Settings.ShowStatusDot)
-        {
-            // Inset the internal component's whole draw into the gutter so
-            // its (hard-coded) name-label origin lands to the right of the
-            // dot instead of under it; the dot itself is drawn afterward, at
-            // full (untranslated) coordinates, in DrawOverlays.
-            var savedTransform = g.Save();
-            try
-            {
-                g.TranslateTransform(DotGutterPx, 0);
-                internalComponent.DrawVertical(g, state, Math.Max(0f, width - DotGutterPx), clipRegion);
-            }
-            finally
-            {
-                // Must run even if the internal draw throws, or every
-                // subsequent frame (including DrawOverlays below) inherits a
-                // stale translated origin instead of the untranslated one it
-                // expects.
-                g.Restore(savedTransform);
-            }
-        }
-        else
-        {
-            internalComponent.DrawVertical(g, state, width, clipRegion);
-        }
-
+        PrepareDraw(state);
+        DrawInset(g, inset => internalComponent.DrawVertical(g, state, Math.Max(0f, width - inset), clipRegion));
         DrawOverlays(g, state, width, VerticalHeight);
     }
 
     public void DrawHorizontal(Graphics g, LiveSplitState state, float height, Region clipRegion)
     {
         DrawBackground(g, state, HorizontalWidth, height);
-        PrepareDraw(state, LayoutMode.Horizontal);
-        if (Settings.ShowStatusDot)
-        {
-            // Same gutter inset as DrawVertical; HorizontalWidth is already
-            // widened by DotGutterPx above, so the internal component's own
-            // (unchanged) intrinsic width plus this translate exactly fills
-            // the advertised row width.
-            var savedTransform = g.Save();
-            try
-            {
-                g.TranslateTransform(DotGutterPx, 0);
-                internalComponent.DrawHorizontal(g, state, height, clipRegion);
-            }
-            finally
-            {
-                // See DrawVertical: must run even if the internal draw
-                // throws, or the stale translated origin leaks into
-                // DrawOverlays and every subsequent frame.
-                g.Restore(savedTransform);
-            }
-        }
-        else
-        {
-            internalComponent.DrawHorizontal(g, state, height, clipRegion);
-        }
-
+        PrepareDraw(state);
+        // HorizontalWidth is already widened by DotGutter above, so the
+        // internal component's own (unchanged) intrinsic width plus this
+        // inset exactly fills the advertised row width.
+        DrawInset(g, _ => internalComponent.DrawHorizontal(g, state, height, clipRegion));
         DrawOverlays(g, state, HorizontalWidth, height);
     }
 

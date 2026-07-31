@@ -27,12 +27,17 @@ public static class ReckoningCalculator
         TimeSpan anchor = situationArrivalElapsed ?? elapsed;
         Variant other = currentVariant == Variant.Cold ? Variant.Hot : Variant.Cold;
 
+        // The three rungs below all anchor at the situation entry; only the
+        // final (unanchored-resume) rung anchors elsewhere.
+        SituationPrediction FromAnchor(TimeSpan best, bool unlearned, BestSource src) =>
+            new(Max(anchor + best, elapsed), unlearned, src);
+
         if (markerBest(currentMarker, currentVariant) is TimeSpan preferred)
-            return new SituationPrediction(Max(anchor + preferred, elapsed), false, ToSource(currentVariant));
+            return FromAnchor(preferred, false, ToSource(currentVariant));
 
         // Wrong-variant data beats no data; flagged unlearned (spec fallback chain).
         if (markerBest(currentMarker, other) is TimeSpan fallback)
-            return new SituationPrediction(Max(anchor + fallback, elapsed), true, ToSource(other));
+            return FromAnchor(fallback, true, ToSource(other));
 
         // Gold prior (no learned data for this marker): the segment gold is the
         // hot prior; what remains of it from this marker is gold minus the hot
@@ -44,15 +49,15 @@ public static class ReckoningCalculator
         {
             TimeSpan remaining = gold - (hotArrival - segmentStartElapsed);
             if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
-            return new SituationPrediction(Max(anchor + remaining, elapsed), true, BestSource.GoldPrior);
+            return FromAnchor(remaining, true, BestSource.GoldPrior);
         }
 
         // Unanchored resume (undo/skip left the hot arrival unknowable): the
         // segment gold from split start remains the only honest floor.
         if (currentSegmentFullBest is TimeSpan fb)
-            return new SituationPrediction(Max(segmentStartElapsed + fb, elapsed), true, BestSource.StandardBpt);
+            return new SituationPrediction(Max(segmentStartElapsed + fb, elapsed), true, BestSource.SegmentGold);
 
-        return new SituationPrediction(null, true, BestSource.StandardBpt);
+        return new SituationPrediction(null, true, BestSource.SegmentGold);
     }
 
     private static BestSource ToSource(Variant v) => v == Variant.Cold ? BestSource.ColdBest : BestSource.HotBest;

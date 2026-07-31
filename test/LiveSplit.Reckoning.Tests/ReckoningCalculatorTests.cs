@@ -80,7 +80,7 @@ public class ReckoningCalculatorTests
             situationArrivalElapsed: S(135), hotArrivalAtCurrentMarker: null, markerBest: NoBests);
         Assert.Equal(S(140), p.Finish);   // max(90+30, 140) = elapsed
         Assert.True(p.Unlearned);
-        Assert.Equal(BestSource.StandardBpt, p.Source);
+        Assert.Equal(BestSource.SegmentGold, p.Source);
     }
 
     [Fact]
@@ -150,14 +150,14 @@ public class ReckoningCalculatorTests
     [Fact]
     public void NoHotArrivalFallsBackToSegmentStartGold()
     {
-        // Unanchored resume (undo/skip): old last-rung behavior, StandardBpt source.
+        // Unanchored resume (undo/skip): old last-rung behavior, SegmentGold source.
         var p = ReckoningCalculator.PredictFinish(
             elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(135), hotArrivalAtCurrentMarker: null,
             markerBest: NoBests);
         Assert.Equal(S(140), p.Finish);   // max(90+30, 140)
-        Assert.Equal(BestSource.StandardBpt, p.Source);
+        Assert.Equal(BestSource.SegmentGold, p.Source);
     }
 
     [Fact]

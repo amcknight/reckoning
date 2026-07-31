@@ -5,7 +5,11 @@ namespace LiveSplit.Reckoning.Engine;
 /// <summary>Which rung of the fallback chain answered the current-segment term.</summary>
 public enum BestSource
 {
-    StandardBpt,
+    /// <summary>Unanchored resume (undo/skip left the hot arrival unknowable):
+    /// priced from the segment gold at segment start, with no situation
+    /// anchor. The "standard BPT" concept this used to name no longer
+    /// exists post-rebase.</summary>
+    SegmentGold,
     ColdBest,
     HotBest,
     /// <summary>No learned data: segment gold minus this run's hot progress to the marker, anchored at the situation.</summary>

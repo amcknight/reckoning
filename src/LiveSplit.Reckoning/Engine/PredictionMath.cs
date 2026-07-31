@@ -18,13 +18,16 @@ public static class PredictionMath
     {
         TimeSpan locked = lastDelta ?? TimeSpan.Zero;   // stock coalesces null to zero
 
+        TimeSpan? WithFinal(TimeSpan delta) => comparisonFinal is TimeSpan f ? delta + f : (TimeSpan?)null;
+        static TimeSpan Beat(TimeSpan lockedDelta, TimeSpan? candidate) =>
+            candidate is TimeSpan cand && cand > lockedDelta ? cand : lockedDelta;
+
         // Null elapsed (e.g. game time with no game-time data yet) must stay
         // stock-parity: stock stays in its Running branch and simply drops
         // the live term, letting the locked delta survive. Same shape as a
         // null comparisonAtCurrentSplit below.
-        TimeSpan? liveDelta = elapsed is TimeSpan e && comparisonAtCurrentSplit is TimeSpan c ? e - c : (TimeSpan?)null;
-        TimeSpan stockDelta = liveDelta is TimeSpan ld && ld > locked ? ld : locked;
-        TimeSpan? stockValue = comparisonFinal is TimeSpan f ? stockDelta + f : (TimeSpan?)null;
+        TimeSpan? liveDelta = elapsed is TimeSpan e && comparisonAtCurrentSplit is TimeSpan atSplit ? e - atSplit : (TimeSpan?)null;
+        TimeSpan? stockValue = WithFinal(Beat(locked, liveDelta));
 
         // With no elapsed there is no death-aware anchor either (the caller
         // never has a predictedFinish to offer without elapsed, but even if
@@ -35,9 +38,7 @@ public static class PredictionMath
             return new ComposedPrediction(stockValue, stockValue,
                 stockValue is null ? null : TimeSpan.Zero);
 
-        TimeSpan drLive = pf - cc;
-        TimeSpan drDelta = drLive > locked ? drLive : locked;
-        TimeSpan? value = comparisonFinal is TimeSpan f2 ? drDelta + f2 : (TimeSpan?)null;
+        TimeSpan? value = WithFinal(Beat(locked, pf - cc));
         TimeSpan? sunk = value is TimeSpan v && stockValue is TimeSpan s ? v - s : (TimeSpan?)null;
         return new ComposedPrediction(stockValue, value, sunk);
     }
