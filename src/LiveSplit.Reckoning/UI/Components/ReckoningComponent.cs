@@ -221,7 +221,15 @@ public class ReckoningComponent : IComponent
             if (state.Run[i].SplitTime[method] is TimeSpan st) { segmentStart = st; break; }
         }
 
-        return model.Compute(elapsed, segmentStart, state.Run[index].BestSegmentTime[method]);
+        // Compute reads store entries (via the markerBest lambda) on this UI
+        // thread; SaveSidecar enumerates the same store under storeLock on
+        // the watcher thread. Lock here too so store access is never read
+        // outside stated lock discipline, not merely safe by Dictionary's
+        // tolerance of concurrent readers with no concurrent writer.
+        lock (storeLock)
+        {
+            return model.Compute(elapsed, segmentStart, state.Run[index].BestSegmentTime[method]);
+        }
     }
 
     public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
