@@ -41,6 +41,12 @@ public sealed class SegmentTracker
         // Spec: on death the runner is assumed to respawn at the last touched
         // marker — the situation is cold from this moment even before respawn.
         CurrentVariant = Variant.Cold;
+        // A previous respawn's cold arrival must not anchor THIS death: until
+        // the new respawn the estimate has no anchor and time is bleeding,
+        // exactly like a first death. The dropped observation loses nothing —
+        // the new respawn would have overwritten it anyway (re-arrival
+        // overwrites; the later arrival is the only one a min-merge keeps).
+        open.Remove((CurrentMarker, Variant.Cold));
     }
 
     public void OnRespawn(TimeSpan elapsed)

@@ -133,4 +133,19 @@ public class SegmentTrackerTests
         t.ResumeSegmentUnanchored();
         Assert.Null(t.CurrentHotArrival);                              // unanchored: unknown
     }
+
+    [Fact]
+    public void RepeatDeathClearsTheStaleColdAnchorUntilRespawn()
+    {
+        var t = new SegmentTracker();
+        t.StartSegment(TimeSpan.FromSeconds(90));
+        t.OnDeath();
+        t.OnRespawn(TimeSpan.FromSeconds(100));
+        Assert.Equal(TimeSpan.FromSeconds(100), t.CurrentArrival);   // anchored at respawn
+        t.OnDeath();                                                 // die again at the same marker
+        Assert.Null(t.CurrentArrival);                               // stale anchor gone: time bleeds again
+        Assert.Equal(TimeSpan.FromSeconds(90), t.CurrentHotArrival); // gold prior input survives
+        t.OnRespawn(TimeSpan.FromSeconds(130));
+        Assert.Equal(TimeSpan.FromSeconds(130), t.CurrentArrival);   // fresh anchor
+    }
 }
