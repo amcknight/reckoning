@@ -56,19 +56,22 @@ comparison.
    Reckoning-only extra.
 3. **First death, unlearned.** Die before touching any checkpoint: the value
    turns gray and prices the segment gold from the respawn ("replay from
-   respawn"), while a red damage number (e.g. `-3.2`) ticks through the death
-   animation — including any timeout sat out — freezes just after respawn,
-   then fades to invisible over ~2.5 s.
+   respawn"), while a red damage number appears at the death and ticks 1:1
+   through the death animation — including any timeout sat out, since the
+   estimate is bleeding — freezes just after respawn at this death's full
+   cost (replay estimate + death→spawn downtime), then fades to invisible
+   over ~2.5 s. The frozen number should roughly match a hand-count of
+   seconds lost to the death.
 4. **Learn it, then reuse it.** Touch a checkpoint, die, respawn, finish the
    segment, split, then **save the splits (Ctrl+S)**. Open
    `<splits>.lss.reckoning.json`: expect a hot AND a cold entry for that
    marker with plausible `bestMs`/`attempts`. Die at the same checkpoint
-   again: the value now uses the learned cold best (no longer gray) and
-   **holds steady after respawn** instead of ticking up 1s/s; the red hit
-   reappears and freezes on the first sample after respawn, which is what
-   captures the re-anchor jump. A hit whose amount comes out exactly zero
-   (the model absorbed the death entirely) is deliberately not drawn — a
-   missing hit there is expected, not a bug.
+   again: the value now uses the learned cold best (no longer gray). The red
+   hit reappears at the death and ticks 1:1 through the animation the same
+   as a first death, then freezes just after respawn at the death's full
+   cost and fades. A hit whose amount comes out exactly zero (the model
+   absorbed the death entirely) is deliberately not drawn — a missing hit
+   there is expected, not a bug.
 5. **Persistence is save-gated — including the exit path.** Split a few more
    times WITHOUT saving, note the sidecar's file mtime, then close LiveSplit
    without saving splits and relaunch. Confirm the mtime is unchanged and the

@@ -146,7 +146,7 @@ public class ReckoningComponent : IComponent
         if (!timerActive || !model.IsRunning) return;
         if (Elapsed() is not TimeSpan elapsed) return;
 
-        if (tick.Death) { hit.OnDeath(lastComposed.Sunk); model.OnDeath(); }
+        if (tick.Death) { hit.OnDeath(lastComposed.Value); model.OnDeath(); }
         if (tick.Checkpoint) model.OnCheckpoint(elapsed);
         if (tick.Respawn) { hit.OnRespawn(); model.OnRespawn(elapsed); }
     }
@@ -300,7 +300,7 @@ public class ReckoningComponent : IComponent
             internalComponent.TimeValue = state.Run.Last().Comparisons[comparison][method];
         }
 
-        hit.Update(lastComposed.Sunk, clock.ElapsedMilliseconds);
+        hit.Update(lastComposed.Value, clock.ElapsedMilliseconds);
 
         cache.Restart();
         cache["dot"] = Settings.ShowStatusDot ? connection.DotColor.ToArgb() : 0;

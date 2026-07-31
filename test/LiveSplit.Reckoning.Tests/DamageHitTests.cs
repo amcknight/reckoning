@@ -12,18 +12,18 @@ public class DamageHitTests
     public void InvisibleUntilDeath()
     {
         var hit = new DamageHit();
-        hit.Update(S(0), nowMs: 0);
+        hit.Update(S(600), nowMs: 0);
         Assert.False(hit.Visible);
     }
 
     [Fact]
-    public void GrowsFromBaselineDuringDeathAnimation()
+    public void GrowsFromTheValueAtDeathDuringTheAnimation()
     {
         var hit = new DamageHit();
-        hit.OnDeath(sunkNow: S(10));           // 10s already sunk this segment
-        hit.Update(S(13), nowMs: 100);
+        hit.OnDeath(valueNow: S(600));         // run was headed for 10:00
+        hit.Update(S(610), nowMs: 100);        // re-anchor + bleeding: now 10:10
         Assert.True(hit.Visible);
-        Assert.Equal(S(3), hit.Amount);        // only THIS death's cost
+        Assert.Equal(S(10), hit.Amount);       // this death's cost so far
         Assert.Equal(255, hit.Alpha(100));
     }
 
@@ -31,13 +31,13 @@ public class DamageHitTests
     public void RespawnJumpIsCapturedThenAmountFreezes()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
-        hit.Update(S(3), nowMs: 0);            // grew a little pre-respawn
+        hit.OnDeath(S(600));
+        hit.Update(S(603), nowMs: 0);          // bleeding through the animation
         hit.OnRespawn();
-        hit.Update(S(22), nowMs: 100);         // re-anchor jump lands on THIS sample
-        Assert.Equal(S(22), hit.Amount);       // jump captured...
-        Assert.Equal(255, hit.Alpha(100));     // ...and fade starts here
-        hit.Update(S(30), nowMs: 200);
+        hit.Update(S(622), nowMs: 100);        // re-anchored estimate lands on THIS sample
+        Assert.Equal(S(22), hit.Amount);       // replay + downtime captured...
+        Assert.Equal(255, hit.Alpha(100));
+        hit.Update(S(630), nowMs: 200);
         Assert.Equal(S(22), hit.Amount);       // ...then frozen
     }
 
@@ -45,50 +45,50 @@ public class DamageHitTests
     public void FadesLinearlyFromTheCapturingSample()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
+        hit.OnDeath(S(600));
         hit.OnRespawn();
-        hit.Update(S(22), nowMs: 0);           // capture + fade start at t=0
+        hit.Update(S(622), nowMs: 0);
         int alpha = hit.Alpha(DamageHit.FadeDurationMs / 2);
-        Assert.InRange(alpha, 120, 135);       // ~half faded
+        Assert.InRange(alpha, 120, 135);
     }
 
     [Fact]
     public void ExpiresAfterFadeDuration()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
+        hit.OnDeath(S(600));
         hit.OnRespawn();
-        hit.Update(S(5), nowMs: 0);            // capture + fade start
-        hit.Update(S(5), nowMs: DamageHit.FadeDurationMs + 1);
+        hit.Update(S(605), nowMs: 0);
+        hit.Update(S(605), nowMs: DamageHit.FadeDurationMs + 1);
         Assert.False(hit.Visible);
         Assert.Equal(0, hit.Alpha(DamageHit.FadeDurationMs + 1));
     }
 
     [Fact]
-    public void NullSunkAfterRespawnStillFreezesSoTheHitCannotLingerForever()
+    public void NullValueAfterRespawnStillFreezesSoTheHitCannotLingerForever()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
-        hit.Update(S(4), nowMs: 0);
+        hit.OnDeath(S(600));
+        hit.Update(S(604), nowMs: 0);
         hit.OnRespawn();
-        hit.Update(null, nowMs: 100);          // sunk unavailable: freeze anyway
-        hit.Update(S(90), nowMs: 200);
+        hit.Update(null, nowMs: 100);          // value unavailable: freeze anyway
+        hit.Update(S(690), nowMs: 200);
         Assert.Equal(S(4), hit.Amount);        // pre-respawn amount kept
-        hit.Update(S(90), nowMs: 100 + DamageHit.FadeDurationMs + 1);
+        hit.Update(S(690), nowMs: 100 + DamageHit.FadeDurationMs + 1);
         Assert.False(hit.Visible);
     }
 
     [Fact]
-    public void SecondDeathRestartsWithNewBaseline()
+    public void SecondDeathRestartsFromTheNewValueBaseline()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
-        hit.Update(S(22), 0);
+        hit.OnDeath(S(600));
+        hit.Update(S(622), 0);
         hit.OnRespawn();
-        hit.OnDeath(S(22));                    // died again later in the segment
-        hit.Update(S(30), 500);
+        hit.OnDeath(S(622));                   // died again later in the segment
+        hit.Update(S(630), 500);
         Assert.True(hit.Visible);
-        Assert.Equal(S(8), hit.Amount);
+        Assert.Equal(S(8), hit.Amount);        // only the NEW death's cost
         Assert.Equal(255, hit.Alpha(500));     // fade restarted
     }
 
@@ -96,17 +96,26 @@ public class DamageHitTests
     public void NegativeGrowthClampsToZero()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(10));
-        hit.Update(S(9), 0);                   // inconsistent data must not show "-(-1)"
+        hit.OnDeath(S(600));
+        hit.Update(S(598), 0);                 // inconsistent data must not show "-(-2)"
         Assert.Equal(TimeSpan.Zero, hit.Amount);
+    }
+
+    [Fact]
+    public void NullValueAtDeathDoesNotActivate()
+    {
+        var hit = new DamageHit();
+        hit.OnDeath(valueNow: null);           // no comparison data: nothing honest to show
+        hit.Update(S(600), 0);
+        Assert.False(hit.Visible);
     }
 
     [Fact]
     public void ClearHidesImmediately()
     {
         var hit = new DamageHit();
-        hit.OnDeath(S(0));
-        hit.Update(S(5), 0);
+        hit.OnDeath(S(600));
+        hit.Update(S(605), 0);
         hit.Clear();
         Assert.False(hit.Visible);
     }
