@@ -42,4 +42,16 @@ public class TimeTextTests
     {
         Assert.Equal("-0:03.4", TimeText.FormatSunk(TimeSpan.FromSeconds(-3.42), RowAccuracy.Tenths));
     }
+
+    [Fact]
+    public void FormatHitUnderAMinuteIsSecondsWithTenths()
+        => Assert.Equal("-22.4", TimeText.FormatHit(TimeSpan.FromSeconds(22.45)));
+
+    [Fact]
+    public void FormatHitOverAMinuteIncludesMinutes()
+        => Assert.Equal("-1:02.4", TimeText.FormatHit(TimeSpan.FromSeconds(62.45)));
+
+    [Fact]
+    public void FormatHitZeroIsStillNegativeByConvention()
+        => Assert.Equal("-0.0", TimeText.FormatHit(TimeSpan.Zero));
 }

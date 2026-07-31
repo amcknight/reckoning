@@ -36,4 +36,15 @@ internal static class TimeText
         string body = Format(s.Duration(), accuracy);
         return s > TimeSpan.Zero ? "+" + body : s < TimeSpan.Zero ? "-" + body : body;
     }
+
+    /// <summary>Damage-number format: always a leading minus (time lost), fixed
+    /// tenths — one glanceable decimal, like an HP hit.</summary>
+    public static string FormatHit(TimeSpan amount)
+    {
+        var t = amount.Duration();
+        int tenths = t.Milliseconds / 100;
+        return t.TotalSeconds < 60
+            ? $"-{(long)t.TotalSeconds}.{tenths}"
+            : $"-{(long)t.TotalMinutes}:{t.Seconds:00}.{tenths}";
+    }
 }
