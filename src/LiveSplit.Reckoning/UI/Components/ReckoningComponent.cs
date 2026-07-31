@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
@@ -10,6 +11,7 @@ using LiveSplit.Reckoning.Persistence;
 using LiveSplit.Reckoning.Snes;
 using LiveSplit.Reckoning.UI;
 using LiveSplit.Reckoning.Watchers;
+using LiveSplit.TimeFormatters;
 using LiveSplit.UI;
 
 namespace LiveSplit.UI.Components;
@@ -19,38 +21,40 @@ public class ReckoningComponent : IComponent
     // 15 ms poll (SMWCounters cadence): under one 60 fps frame, so no
     // death/checkpoint edge can slip between polls.
     private const int PollIntervalMs = 15;
-    // Half opacity for unlearned values: clearly dimmed, still legible on
-    // light and dark layouts (spec: subtle visual flag).
-    private const int UnlearnedValueAlpha = 128;
-    // Matches LiveSplit's InfoTextComponent default row height.
-    private const float RowHeightPx = 25f;
     // 5x5 px matches SMWCounters' proven status-pixel size — small enough to
     // be unobtrusive, large enough to read color at a glance.
     private const float StatusDotSizePx = 5f;
     // Matches SMWCounters' fixed dot position: pinned near the component's
     // left edge, clear of the row padding so text never overlaps it.
     private const float StatusDotLeftPx = 3f;
-    // Horizontal layout mode: room for label + "1:02:03.45" value at default
-    // fonts; the minimum keeps both legible before ellipsis truncation.
-    private const float HorizontalWidthPx = 220f;
-    private const float MinimumWidthPx = 120f;
-    // 7f per side matches LiveSplit's InfoTextComponent intrinsic padding, so
-    // the rows align with stock info components in the same layout.
-    private const float SidePaddingPx = 7f;
+    // Unlearned values render in a fixed dim gray: legible on light and dark
+    // layouts where alpha-dimming vanished into dark backgrounds (live-test 1).
+    private static readonly Color UnlearnedColor = Color.Gray;
+    // Damage red, matching LiveSplit's default "behind, losing time" red so the
+    // hit reads instantly as lost time.
+    private static readonly Color HitColor = Color.FromArgb(255, 51, 51);
+    // Gap between the hit number and the value text; one character-ish at
+    // default fonts, so the hit reads as a separate transient, not a prefix.
+    private const float HitGapPx = 8f;
 
     private readonly LiveSplitState state;
     private readonly SnesConnection connection = new();
     private readonly SmwEventDetector detector = new();
     private readonly Timer pollTimer;
     private readonly GraphicsCache cache = new();
-    private readonly SimpleLabel[] nameLabels = { new(), new() };
-    private readonly SimpleLabel[] valueLabels = { new(), new() };
+    private readonly InfoTimeComponent internalComponent;
+    private readonly SplitTimeFormatter formatter;
+    private readonly DamageHit hit = new();
+    private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+    private readonly SimpleLabel hitLabel = new();
 
     private BestsStore store = new();
     private ReckoningModel model;
     private string loadedLssPath;
     private int lastGeneration = -1;
-    private SituationPrediction lastResult;
+    private ComposedPrediction lastComposed;
+    private bool lastUnlearned;
+    private string previousInformationName;
 
     public ReckoningComponentSettings Settings { get; } = new();
 
@@ -58,27 +62,43 @@ public class ReckoningComponent : IComponent
     {
         this.state = state;
         model = new ReckoningModel(store);
+        formatter = new SplitTimeFormatter(Settings.Accuracy);
+        internalComponent = new InfoTimeComponent(null, null, formatter);
+        Settings.CurrentState = state;
+
         state.OnStart += OnStart;
         state.OnSplit += OnSplit;
         state.OnUndoSplit += OnUndoSplit;
         state.OnSkipSplit += OnSkipSplit;
         state.OnReset += OnReset;
+        // Ported from LiveSplit's RunPrediction component (MIT).
+        state.ComparisonRenamed += OnComparisonRenamed;
+
         pollTimer = new Timer { Interval = PollIntervalMs };
         pollTimer.Tick += (_, _) => Poll();
         pollTimer.Enabled = true;
     }
 
-    public string ComponentName => "Reckoning";
-    // Temporary bridge (Task 5 dropped ShowSunkRow; Task 6 rewrites this
-    // against the stock Run Prediction layout): single row for now.
-    public float VerticalHeight => false ? RowHeightPx * 2 : RowHeightPx;
-    public float MinimumHeight => VerticalHeight;
-    public float HorizontalWidth => HorizontalWidthPx;
-    public float MinimumWidth => MinimumWidthPx;
-    public float PaddingTop => 0f;
-    public float PaddingBottom => 0f;
-    public float PaddingLeft => SidePaddingPx;
-    public float PaddingRight => SidePaddingPx;
+    // Ported from LiveSplit's RunPrediction component (MIT).
+    private void OnComparisonRenamed(object sender, EventArgs e)
+    {
+        var args = (RenameEventArgs)e;
+        if (Settings.Comparison == args.OldName)
+        {
+            Settings.Comparison = args.NewName;
+            ((LiveSplitState)sender).Layout.HasChanged = true;
+        }
+    }
+
+    public string ComponentName => ComparisonNaming.GetDisplayedName(Settings.Comparison);
+    public float VerticalHeight => internalComponent.VerticalHeight;
+    public float MinimumHeight => internalComponent.MinimumHeight;
+    public float HorizontalWidth => internalComponent.HorizontalWidth;
+    public float MinimumWidth => internalComponent.MinimumWidth;
+    public float PaddingTop => internalComponent.PaddingTop;
+    public float PaddingBottom => internalComponent.PaddingBottom;
+    public float PaddingLeft => internalComponent.PaddingLeft;
+    public float PaddingRight => internalComponent.PaddingRight;
     public IDictionary<string, Action> ContextMenuControls => null;
 
     private TimeSpan? Elapsed() => state.CurrentTime[state.CurrentTimingMethod];
@@ -97,9 +117,9 @@ public class ReckoningComponent : IComponent
         if (!timerActive || !model.IsRunning) return;
         if (Elapsed() is not TimeSpan elapsed) return;
 
-        if (tick.Death) model.OnDeath();
+        if (tick.Death) { hit.OnDeath(lastComposed.Sunk); model.OnDeath(); }
         if (tick.Checkpoint) model.OnCheckpoint(elapsed);
-        if (tick.Respawn) model.OnRespawn(elapsed);
+        if (tick.Respawn) { hit.OnRespawn(clock.ElapsedMilliseconds); model.OnRespawn(elapsed); }
     }
 
     private void Poll()
@@ -140,6 +160,7 @@ public class ReckoningComponent : IComponent
     private void OnStart(object sender, EventArgs e)
     {
         detector.Reset();
+        hit.Clear();
         model.OnStart(Elapsed() ?? TimeSpan.Zero);
     }
 
@@ -149,24 +170,23 @@ public class ReckoningComponent : IComponent
         SaveSidecar();
     }
 
-    private void OnUndoSplit(object sender, EventArgs e) => model.OnUndoSplit(Elapsed() ?? TimeSpan.Zero);
-    private void OnSkipSplit(object sender, EventArgs e) => model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
-    private void OnReset(object sender, TimerPhase phase) => model.OnReset();
-
-    private SituationPrediction ComputeNow()
+    private void OnUndoSplit(object sender, EventArgs e)
     {
-        // Upper bound mirrors LiveSplit's own CurrentSplit accessor: after the
-        // final split, CurrentSplitIndex == Run.Count (phase Ended) while the
-        // model still reads as running — indexing Run there would throw on
-        // every redraw and stall the layout's update loop.
-        if (!model.IsRunning
-            || state.CurrentSplitIndex < 0 || state.CurrentSplitIndex >= state.Run.Count
-            || Elapsed() is not TimeSpan elapsed)
-            return null;
+        hit.Clear();
+        model.OnUndoSplit(Elapsed() ?? TimeSpan.Zero);
+    }
 
-        var method = state.CurrentTimingMethod;
+    private void OnSkipSplit(object sender, EventArgs e) => model.OnSkipSplit(Elapsed() ?? TimeSpan.Zero);
+
+    private void OnReset(object sender, TimerPhase phase)
+    {
+        hit.Clear();
+        model.OnReset();
+    }
+
+    private SituationPrediction ComputePrediction(LiveSplitState state, TimingMethod method, TimeSpan elapsed)
+    {
         int index = state.CurrentSplitIndex;
-
         // Segment start = last non-null earlier split time (skips leave nulls).
         TimeSpan segmentStart = TimeSpan.Zero;
         for (int i = index - 1; i >= 0; i--)
@@ -174,50 +194,117 @@ public class ReckoningComponent : IComponent
             if (state.Run[i].SplitTime[method] is TimeSpan st) { segmentStart = st; break; }
         }
 
-        TimeSpan? fullBest = state.Run[index].BestSegmentTime[method];
-
-        return model.Compute(elapsed, segmentStart, fullBest);
+        return model.Compute(elapsed, segmentStart, state.Run[index].BestSegmentTime[method]);
     }
 
     public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
     {
         ReloadSidecarIfPathChanged();
-        lastResult = ComputeNow();
+
+        // Ported from LiveSplit's RunPrediction component (MIT).
+        string comparison = Settings.Comparison == "Current Comparison" ? state.CurrentComparison : Settings.Comparison;
+        if (!state.Run.Comparisons.Contains(comparison)) comparison = state.CurrentComparison;
+
+        internalComponent.InformationName = internalComponent.LongestString = ComparisonNaming.GetDisplayedName(comparison);
+        if (internalComponent.InformationName != previousInformationName)
+        {
+            internalComponent.AlternateNameText = ComparisonNaming.GetAbbreviations(comparison);
+            previousInformationName = internalComponent.InformationName;
+        }
+
+        var method = state.CurrentTimingMethod;
+        lastComposed = default;
+        lastUnlearned = false;
+
+        if (internalComponent.InformationName.StartsWith("Current Pace") && state.CurrentPhase == TimerPhase.NotRunning)
+        {
+            internalComponent.TimeValue = null;
+        }
+        else if (state.CurrentPhase is TimerPhase.Running or TimerPhase.Paused
+                 && state.CurrentSplitIndex >= 0 && state.CurrentSplitIndex < state.Run.Count
+                 && state.CurrentTime[method] is TimeSpan elapsed)
+        {
+            var prediction = model.IsRunning ? ComputePrediction(state, method, elapsed) : null;
+            lastUnlearned = prediction?.Unlearned ?? false;
+            lastComposed = PredictionMath.Compose(
+                LiveSplitStateHelper.GetLastDelta(state, state.CurrentSplitIndex, comparison, method),
+                elapsed,
+                state.CurrentSplit.Comparisons[comparison][method],
+                state.Run.Last().Comparisons[comparison][method],
+                prediction?.Finish);
+            internalComponent.TimeValue = lastComposed.Value;
+        }
+        else if (state.CurrentPhase == TimerPhase.Ended)
+        {
+            internalComponent.TimeValue = state.Run.Last().SplitTime[method];
+        }
+        else
+        {
+            internalComponent.TimeValue = state.Run.Last().Comparisons[comparison][method];
+        }
+
+        hit.Update(lastComposed.Sunk, clock.ElapsedMilliseconds);
 
         cache.Restart();
-        // Temporary bridge (Task 5 rewrites this against the stock Run
-        // Prediction formula): displays only the death-aware finish estimate.
-        cache["reckoning"] = lastResult?.Finish?.ToString() ?? "—";
-        cache["sunk"] = "";
-        cache["unlearned"] = lastResult?.Unlearned ?? false;
-        cache["sunkRow"] = false;
         cache["dot"] = Settings.ShowStatusDot ? connection.DotColor.ToArgb() : 0;
+        cache["unlearned"] = lastUnlearned;
+        cache["hitAmount"] = hit.Visible ? hit.Amount.Ticks : 0L;
+        // Bucketed so the fade repaints smoothly without invalidating every tick.
+        cache["hitAlpha"] = hit.Alpha(clock.ElapsedMilliseconds) / 16;
         if (cache.HasChanged) invalidator?.Invalidate(0, 0, width, height);
+
+        internalComponent.Update(invalidator, state, width, height, mode);
     }
 
-    public void DrawVertical(Graphics g, LiveSplitState state, float width, Region clipRegion) =>
-        DrawGeneral(g, state, width, VerticalHeight);
-
-    public void DrawHorizontal(Graphics g, LiveSplitState state, float height, Region clipRegion) =>
-        DrawGeneral(g, state, HorizontalWidth, height);
-
-    private void DrawGeneral(Graphics g, LiveSplitState state, float width, float height)
+    private void PrepareDraw(LiveSplitState state, LayoutMode mode)
     {
-        var textColor = state.LayoutSettings.TextColor;
-        var valueColor = (lastResult?.Unlearned ?? false)
-            ? Color.FromArgb(UnlearnedValueAlpha, textColor)
-            : textColor;
-        int rows = false ? 2 : 1;
-        float rowHeight = height / rows;
+        // Ported from LiveSplit's RunPrediction component (MIT).
+        internalComponent.DisplayTwoRows = Settings.Display2Rows;
+        internalComponent.NameLabel.HasShadow = internalComponent.ValueLabel.HasShadow = state.LayoutSettings.DropShadows;
+        formatter.Accuracy = Settings.Accuracy;
+        internalComponent.NameLabel.ForeColor = Settings.OverrideTextColor ? Settings.TextColor : state.LayoutSettings.TextColor;
+        var valueColor = Settings.OverrideTimeColor ? Settings.TimeColor : state.LayoutSettings.TextColor;
+        internalComponent.ValueLabel.ForeColor = lastUnlearned ? UnlearnedColor : valueColor;
+    }
 
-        // Temporary bridge (Task 5 rewrites this against the stock Run
-        // Prediction formula): displays only the death-aware finish estimate.
-        DrawRow(g, state, 0, rowHeight, width, "Reckoning",
-            lastResult?.Finish?.ToString() ?? "—", textColor, valueColor);
-        if (false)
+    // Ported from LiveSplit's RunPrediction component (MIT).
+    private void DrawBackground(Graphics g, LiveSplitState state, float width, float height)
+    {
+        if (Settings.BackgroundColor.A > 0
+            || (Settings.BackgroundGradient != GradientType.Plain
+            && Settings.BackgroundColor2.A > 0))
         {
-            DrawRow(g, state, 1, rowHeight, width, "Sunk",
-                "", textColor, valueColor);
+            var gradientBrush = new LinearGradientBrush(
+                        new PointF(0, 0),
+                        Settings.BackgroundGradient == GradientType.Horizontal
+                        ? new PointF(width, 0)
+                        : new PointF(0, height),
+                        Settings.BackgroundColor,
+                        Settings.BackgroundGradient == GradientType.Plain
+                        ? Settings.BackgroundColor
+                        : Settings.BackgroundColor2);
+            g.FillRectangle(gradientBrush, 0, 0, width, height);
+        }
+    }
+
+    private void DrawOverlays(Graphics g, LiveSplitState state, float width, float height)
+    {
+        int alpha = hit.Alpha(clock.ElapsedMilliseconds);
+        if (hit.Visible && alpha > 0)
+        {
+            float valueWidth = g.MeasureString(internalComponent.InformationValue ?? "", state.LayoutSettings.TimesFont).Width;
+            hitLabel.Text = TimeText.FormatHit(hit.Amount);
+            hitLabel.Font = state.LayoutSettings.TimesFont;
+            hitLabel.ForeColor = Color.FromArgb(alpha, HitColor);
+            hitLabel.HasShadow = state.LayoutSettings.DropShadows;
+            hitLabel.ShadowColor = state.LayoutSettings.ShadowsColor;
+            hitLabel.HorizontalAlignment = StringAlignment.Far;
+            hitLabel.VerticalAlignment = StringAlignment.Center;
+            hitLabel.X = 0;
+            hitLabel.Y = 0;
+            hitLabel.Width = width - valueWidth - HitGapPx - 12;   // 12: InfoTextComponent's own value-label right inset
+            hitLabel.Height = height;
+            hitLabel.Draw(g);
         }
 
         if (Settings.ShowStatusDot)
@@ -227,34 +314,20 @@ public class ReckoningComponent : IComponent
         }
     }
 
-    private void DrawRow(Graphics g, LiveSplitState state, int row, float rowHeight, float width,
-        string name, string value, Color nameColor, Color valueColor)
+    public void DrawVertical(Graphics g, LiveSplitState state, float width, Region clipRegion)
     {
-        float y = row * rowHeight;
-        var font = state.LayoutSettings.TextFont;
-        var nameLabel = nameLabels[row];
-        nameLabel.Text = name;
-        nameLabel.Font = font;
-        nameLabel.ForeColor = nameColor;
-        nameLabel.HorizontalAlignment = StringAlignment.Near;
-        nameLabel.VerticalAlignment = StringAlignment.Center;
-        nameLabel.X = PaddingLeft + StatusDotSizePx;
-        nameLabel.Y = y;
-        nameLabel.Width = width / 2;
-        nameLabel.Height = rowHeight;
-        nameLabel.Draw(g);
+        DrawBackground(g, state, width, VerticalHeight);
+        PrepareDraw(state, LayoutMode.Vertical);
+        internalComponent.DrawVertical(g, state, width, clipRegion);
+        DrawOverlays(g, state, width, VerticalHeight);
+    }
 
-        var valueLabel = valueLabels[row];
-        valueLabel.Text = value;
-        valueLabel.Font = state.LayoutSettings.TimesFont;
-        valueLabel.ForeColor = valueColor;
-        valueLabel.HorizontalAlignment = StringAlignment.Far;
-        valueLabel.VerticalAlignment = StringAlignment.Center;
-        valueLabel.X = width / 2;
-        valueLabel.Y = y;
-        valueLabel.Width = width / 2 - PaddingRight;
-        valueLabel.Height = rowHeight;
-        valueLabel.Draw(g);
+    public void DrawHorizontal(Graphics g, LiveSplitState state, float height, Region clipRegion)
+    {
+        DrawBackground(g, state, HorizontalWidth, height);
+        PrepareDraw(state, LayoutMode.Horizontal);
+        internalComponent.DrawHorizontal(g, state, height, clipRegion);
+        DrawOverlays(g, state, HorizontalWidth, height);
     }
 
     public Control GetSettingsControl(LayoutMode mode) => Settings;
@@ -271,5 +344,6 @@ public class ReckoningComponent : IComponent
         state.OnUndoSplit -= OnUndoSplit;
         state.OnSkipSplit -= OnSkipSplit;
         state.OnReset -= OnReset;
+        state.ComparisonRenamed -= OnComparisonRenamed;
     }
 }

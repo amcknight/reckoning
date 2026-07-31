@@ -9,7 +9,7 @@ namespace LiveSplit.UI.Components;
 public class ReckoningComponentFactory : IComponentFactory
 {
     public string ComponentName => "Reckoning";
-    public string Description => "Death-aware Best Possible Time for SMW kaizo: what finish is actually still possible from where death left you.";
+    public string Description => "Death-aware Run Prediction for SMW kaizo: any comparison, with learned post-death recovery paces and a damage-style time-lost hit.";
     public ComponentCategory Category => ComponentCategory.Information;
     public IComponent Create(LiveSplitState state) => new ReckoningComponent(state);
     public string UpdateName => ComponentName;
