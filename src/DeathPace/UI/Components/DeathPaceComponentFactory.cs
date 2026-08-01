@@ -8,7 +8,7 @@ namespace LiveSplit.UI.Components;
 
 public class DeathPaceComponentFactory : IComponentFactory
 {
-    public string ComponentName => "DeathPace";
+    public string ComponentName => "SMW Death Pace";
     public string Description => "Death-aware Run Prediction for SMW kaizo: any comparison, with learned post-death recovery paces and a damage-style time-lost hit.";
     public ComponentCategory Category => ComponentCategory.Information;
     public IComponent Create(LiveSplitState state) => new DeathPaceComponent(state);

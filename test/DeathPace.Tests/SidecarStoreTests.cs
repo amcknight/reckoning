@@ -14,7 +14,7 @@ public class SidecarStoreTests : IDisposable
     public SidecarStoreTests() => Directory.CreateDirectory(dir);
     public void Dispose() => Directory.Delete(dir, true);
 
-    private string SidecarPath => Path.Combine(dir, "run.lss.reckoning.json");
+    private string SidecarPath => Path.Combine(dir, "run.lss.deathpace.json");
 
     private static readonly string[] SegmentNames = { "Yump 1", "Yump 2" };
 
@@ -30,7 +30,7 @@ public class SidecarStoreTests : IDisposable
     [Fact]
     public void PathForAppendsSuffix()
     {
-        Assert.Equal(@"C:\s\run.lss.reckoning.json", SidecarStore.PathFor(@"C:\s\run.lss"));
+        Assert.Equal(@"C:\s\run.lss.deathpace.json", SidecarStore.PathFor(@"C:\s\run.lss"));
     }
 
     [Fact]

@@ -13,7 +13,7 @@ namespace DeathPace.Persistence;
 internal static class SidecarStore
 {
     private const int SchemaVersion = 1;
-    private const string Suffix = ".reckoning.json";
+    private const string Suffix = ".deathpace.json";
 
     public static string PathFor(string lssPath) => lssPath + Suffix;
 

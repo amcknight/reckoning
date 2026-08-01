@@ -120,7 +120,7 @@ public class DeathPaceComponent : IComponent
     // tab in the layout editor must be findable under one stable name, so this
     // stays "SMW Death Pace" regardless of comparison. The on-layout row label still
     // follows the comparison via InformationName, set each frame in Update().
-    public string ComponentName => "DeathPace";
+    public string ComponentName => "SMW Death Pace";
     public float VerticalHeight => internalComponent.VerticalHeight;
     public float MinimumHeight => internalComponent.MinimumHeight;
     // Widened by the dot gutter when the dot is shown, so the layout engine
