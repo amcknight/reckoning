@@ -7,17 +7,17 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
 using LiveSplit.Model;
-using LiveSplit.Reckoning.Engine;
-using LiveSplit.Reckoning.Persistence;
-using LiveSplit.Reckoning.Snes;
-using LiveSplit.Reckoning.UI;
-using LiveSplit.Reckoning.Watchers;
+using DeathPace.Engine;
+using DeathPace.Persistence;
+using DeathPace.Snes;
+using DeathPace.UI;
+using DeathPace.Watchers;
 using LiveSplit.TimeFormatters;
 using LiveSplit.UI;
 
 namespace LiveSplit.UI.Components;
 
-public class ReckoningComponent : IComponent
+public class DeathPaceComponent : IComponent
 {
     // 15 ms poll (SMWCounters cadence): under one 60 fps frame, so no
     // death/checkpoint edge can slip between polls.
@@ -62,7 +62,7 @@ public class ReckoningComponent : IComponent
     private readonly object storeLock = new();
 
     private BestsStore store = new();
-    private ReckoningModel model;
+    private DeathPaceModel model;
     private string loadedLssPath;
     private int lastGeneration = -1;
     private ComposedPrediction lastComposed;
@@ -81,12 +81,12 @@ public class ReckoningComponent : IComponent
     private readonly DateTime componentStartUtc = DateTime.UtcNow;
     private DateTime lastSidecarSaveUtc = DateTime.MinValue;
 
-    public ReckoningComponentSettings Settings { get; } = new();
+    public DeathPaceComponentSettings Settings { get; } = new();
 
-    public ReckoningComponent(LiveSplitState state)
+    public DeathPaceComponent(LiveSplitState state)
     {
         this.state = state;
-        model = new ReckoningModel(store);
+        model = new DeathPaceModel(store);
         saveWatcher = new SplitsSaveWatcher(SaveSidecar);
         formatter = new SplitTimeFormatter(Settings.Accuracy);
         internalComponent = new InfoTimeComponent(null, null, formatter);
@@ -118,9 +118,9 @@ public class ReckoningComponent : IComponent
 
     // Deviation from stock (which shows the comparison name here): the settings
     // tab in the layout editor must be findable under one stable name, so this
-    // stays "Reckoning" regardless of comparison. The on-layout row label still
+    // stays "SMW Death Pace" regardless of comparison. The on-layout row label still
     // follows the comparison via InformationName, set each frame in Update().
-    public string ComponentName => "Reckoning";
+    public string ComponentName => "DeathPace";
     public float VerticalHeight => internalComponent.VerticalHeight;
     public float MinimumHeight => internalComponent.MinimumHeight;
     // Widened by the dot gutter when the dot is shown, so the layout engine
@@ -181,7 +181,7 @@ public class ReckoningComponent : IComponent
         {
             loadedLssPath = lss;
             store = loaded;
-            model = new ReckoningModel(store);
+            model = new DeathPaceModel(store);
         }
         saveWatcher.WatchPath(lss);
     }

@@ -11,8 +11,8 @@ using LiveSplit.UI;
 namespace LiveSplit.UI.Components;
 
 /// <summary>Settings surface cloned from stock LiveSplit.RunPrediction (MIT) —
-/// same fields, XML keys, and defaults — plus Reckoning's ShowStatusDot.</summary>
-public class ReckoningComponentSettings : UserControl
+/// same fields, XML keys, and defaults — plus Death Pace's ShowStatusDot.</summary>
+public class DeathPaceComponentSettings : UserControl
 {
     // Accuracy combo order mirrors TimeAccuracy's own declared order, so
     // SelectedIndex casts directly to the enum with no lookup table.
@@ -60,7 +60,7 @@ public class ReckoningComponentSettings : UserControl
     public bool ShowStatusDot { get; set; } = true;
     public LiveSplitState CurrentState { get; set; }
 
-    public ReckoningComponentSettings()
+    public DeathPaceComponentSettings()
     {
         // Explicit size — see SettingsWidth/SettingsHeight derivation above.
         // Without this, LiveSplit's settings dialog renders the control at

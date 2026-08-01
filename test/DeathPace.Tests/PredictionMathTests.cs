@@ -1,8 +1,8 @@
 using System;
-using LiveSplit.Reckoning.Engine;
+using DeathPace.Engine;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class PredictionMathTests
 {

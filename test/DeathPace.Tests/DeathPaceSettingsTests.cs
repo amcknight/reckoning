@@ -5,15 +5,15 @@ using LiveSplit.UI;
 using LiveSplit.UI.Components;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
-public class ReckoningSettingsTests
+public class DeathPaceSettingsTests
 {
-    private static ReckoningComponentSettings Roundtrip(ReckoningComponentSettings s)
+    private static DeathPaceComponentSettings Roundtrip(DeathPaceComponentSettings s)
     {
         var doc = new XmlDocument();
         var node = s.GetSettings(doc);
-        var fresh = new ReckoningComponentSettings();
+        var fresh = new DeathPaceComponentSettings();
         fresh.SetSettings(node);
         return fresh;
     }
@@ -21,7 +21,7 @@ public class ReckoningSettingsTests
     [Fact]
     public void DefaultsMatchStockRunPrediction()
     {
-        var s = new ReckoningComponentSettings();
+        var s = new DeathPaceComponentSettings();
         Assert.Equal("Current Comparison", s.Comparison);
         Assert.False(s.OverrideTextColor);
         Assert.False(s.OverrideTimeColor);
@@ -34,7 +34,7 @@ public class ReckoningSettingsTests
     [Fact]
     public void AllFieldsSurviveRoundtrip()
     {
-        var s = new ReckoningComponentSettings
+        var s = new DeathPaceComponentSettings
         {
             Comparison = "Best Segments",
             OverrideTextColor = true,
@@ -66,7 +66,7 @@ public class ReckoningSettingsTests
     public void StockXmlKeysAreUsed()
     {
         var doc = new XmlDocument();
-        var node = new ReckoningComponentSettings().GetSettings(doc);
+        var node = new DeathPaceComponentSettings().GetSettings(doc);
         foreach (var key in new[] { "Comparison", "OverrideTextColor", "TextColor",
             "OverrideTimeColor", "TimeColor", "BackgroundColor", "BackgroundColor2",
             "BackgroundGradient", "Accuracy", "Display2Rows", "ShowStatusDot" })
@@ -77,9 +77,9 @@ public class ReckoningSettingsTests
     public void GarbageAccuracyFallsBackToDefault()
     {
         var doc = new XmlDocument();
-        var node = new ReckoningComponentSettings().GetSettings(doc);
+        var node = new DeathPaceComponentSettings().GetSettings(doc);
         node["Accuracy"].InnerText = "Garbage";
-        var fresh = new ReckoningComponentSettings();
+        var fresh = new DeathPaceComponentSettings();
         fresh.SetSettings(node);
         Assert.Equal(TimeAccuracy.Seconds, fresh.Accuracy);
     }
@@ -88,9 +88,9 @@ public class ReckoningSettingsTests
     public void GarbageBackgroundGradientFallsBackToDefault()
     {
         var doc = new XmlDocument();
-        var node = new ReckoningComponentSettings().GetSettings(doc);
+        var node = new DeathPaceComponentSettings().GetSettings(doc);
         node["BackgroundGradient"].InnerText = "Garbage";
-        var fresh = new ReckoningComponentSettings();
+        var fresh = new DeathPaceComponentSettings();
         fresh.SetSettings(node);
         Assert.Equal(GradientType.Plain, fresh.BackgroundGradient);
     }
@@ -103,9 +103,9 @@ public class ReckoningSettingsTests
         // though it isn't a recognized name — must fall back same as
         // "Garbage" rather than sail through as a bogus enum value.
         var doc = new XmlDocument();
-        var node = new ReckoningComponentSettings().GetSettings(doc);
+        var node = new DeathPaceComponentSettings().GetSettings(doc);
         node["Accuracy"].InnerText = "7";
-        var fresh = new ReckoningComponentSettings();
+        var fresh = new DeathPaceComponentSettings();
         fresh.SetSettings(node);
         Assert.Equal(TimeAccuracy.Seconds, fresh.Accuracy);
     }

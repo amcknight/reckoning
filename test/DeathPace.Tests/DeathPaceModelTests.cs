@@ -1,10 +1,10 @@
 using System;
-using LiveSplit.Reckoning.Engine;
+using DeathPace.Engine;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
-public class ReckoningModelTests
+public class DeathPaceModelTests
 {
     private static TimeSpan S(double s) => TimeSpan.FromSeconds(s);
 
@@ -12,7 +12,7 @@ public class ReckoningModelTests
     public void SplitRecordsObservationsForFinishedSegmentAndAdvances()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnCheckpoint(S(20));
         m.OnSplit(S(50));
@@ -28,7 +28,7 @@ public class ReckoningModelTests
     public void DeathRespawnSplitRecordsColdBest()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnCheckpoint(S(20));
         m.OnDeath();
@@ -43,7 +43,7 @@ public class ReckoningModelTests
     {
         var store = new BestsStore();
         store.SetEntry(new MarkerKey(0, 0, Variant.Hot), new BestEntry(60_000, 3));
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSplit(S(50));            // improves hot-0 best to 50s, attempts 4
         Assert.Equal(1, m.CurrentSegmentIndex);
@@ -58,7 +58,7 @@ public class ReckoningModelTests
     public void UndoSplitRemovesRecordsThatDidNotExistBefore()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSplit(S(50));
         m.OnUndoSplit(S(55));
@@ -69,7 +69,7 @@ public class ReckoningModelTests
     public void SkipSplitRecordsNothingButAdvances()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnCheckpoint(S(20));
         m.OnSkipSplit(S(30));
@@ -81,7 +81,7 @@ public class ReckoningModelTests
     public void ResetDiscardsInFlightObservations()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnCheckpoint(S(20));
         m.OnReset();
@@ -95,7 +95,7 @@ public class ReckoningModelTests
     public void EventsBeforeStartAreIgnored()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnDeath();
         m.OnCheckpoint(S(5));
         m.OnSplit(S(10));
@@ -109,7 +109,7 @@ public class ReckoningModelTests
     {
         var store = new BestsStore();
         store.SetEntry(new MarkerKey(1, 1, Variant.Cold), new BestEntry(22_000, 2));
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSplit(S(90));            // now in segment 1
         m.OnCheckpoint(S(110));
@@ -124,7 +124,7 @@ public class ReckoningModelTests
     public void UndoThenSplitRecordsNoMarkerZeroBest()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSplit(S(50));            // records hot-0 = 50s
         m.OnUndoSplit(S(55));        // reverts the 50s record; resumes unanchored
@@ -136,7 +136,7 @@ public class ReckoningModelTests
     public void SkipThenSplitRecordsNothingForSkippedIntoSegment()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSkipSplit(S(30));        // segment 1 begins unanchored
         m.OnSplit(S(60));            // no anchored observation existed: records nothing
@@ -148,7 +148,7 @@ public class ReckoningModelTests
     public void CheckpointAfterUndoStillRecordsAnchored()
     {
         var store = new BestsStore();
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnSplit(S(50));
         m.OnUndoSplit(S(55));        // resumes segment 0 unanchored
@@ -165,7 +165,7 @@ public class ReckoningModelTests
         var store = new BestsStore();
         store.SetEntry(new MarkerKey(0, 1, Variant.Hot), new BestEntry(18_000, 1));
         store.SetEntry(new MarkerKey(0, 1, Variant.Cold), new BestEntry(22_000, 1));
-        var m = new ReckoningModel(store);
+        var m = new DeathPaceModel(store);
         m.OnStart(S(0));
         m.OnDeath();
         m.OnRespawn(S(10));

@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace LiveSplit.Reckoning.Persistence;
+namespace DeathPace.Persistence;
 
 /// <summary>Fires a callback when LiveSplit writes the watched .lss file, so
 /// the sidecar persists exactly when the user saves splits — learned data

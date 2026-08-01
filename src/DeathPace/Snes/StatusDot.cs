@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace LiveSplit.Reckoning.Snes;
+namespace DeathPace.Snes;
 
 /// <summary>Pure EmuState-name -> dot color mapping (SMWCounters pattern).
 /// String-keyed so this file has no SNES.dll dependency.</summary>

@@ -1,8 +1,8 @@
 using System.Drawing;
-using LiveSplit.Reckoning.Snes;
+using DeathPace.Snes;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class StatusDotTests
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 /// <summary>Which rung of the fallback chain answered the current-segment term.</summary>
 public enum BestSource

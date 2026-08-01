@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using LiveSplit.Reckoning.Watchers;
+using DeathPace.Watchers;
 using SNES;
 
-namespace LiveSplit.Reckoning.Snes;
+namespace DeathPace.Snes;
 
 internal sealed class SnesConnection : ISnesMemory
 {

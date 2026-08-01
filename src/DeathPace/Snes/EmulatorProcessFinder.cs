@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace LiveSplit.Reckoning.Snes;
+namespace DeathPace.Snes;
 
 /// <summary>Ordered process scan mirroring the kaizosplits autosplitter's
 /// emulator list (same order, same names).</summary>

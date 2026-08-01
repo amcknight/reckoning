@@ -1,4 +1,4 @@
-namespace LiveSplit.Reckoning.Watchers;
+namespace DeathPace.Watchers;
 
 /// <summary>Console-space WRAM offsets, mirrored from kaizosplits
 /// Components/SMW/SMW/Memory.cs (the proven address set).</summary>

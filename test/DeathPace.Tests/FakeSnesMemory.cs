@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using LiveSplit.Reckoning.Watchers;
+using DeathPace.Watchers;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 internal sealed class FakeSnesMemory : ISnesMemory
 {

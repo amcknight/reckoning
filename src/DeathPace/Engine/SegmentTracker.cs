@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 /// <summary>Ordered-progress-marker state for the segment in flight.
 /// Markers are identified by order-within-segment (marker 0 = segment start);

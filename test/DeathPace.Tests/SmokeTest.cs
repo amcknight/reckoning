@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class SmokeTest
 {

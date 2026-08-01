@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 /// <summary>Run-scoped orchestrator: maps timer lifecycle events onto the
 /// tracker and store, and answers DR-BPT queries. Pure — the component shell
 /// is the only place LiveSplit types appear.</summary>
-public sealed class ReckoningModel
+public sealed class DeathPaceModel
 {
     private readonly BestsStore store;
     private readonly SegmentTracker tracker = new();
@@ -14,7 +14,7 @@ public sealed class ReckoningModel
     // so an undone split's records can be reverted exactly.
     private readonly Stack<List<(MarkerKey Key, BestEntry Prior)>> journal = new();
 
-    public ReckoningModel(BestsStore store) => this.store = store;
+    public DeathPaceModel(BestsStore store) => this.store = store;
 
     public int CurrentSegmentIndex { get; private set; }
     public bool IsRunning { get; private set; }
@@ -94,7 +94,7 @@ public sealed class ReckoningModel
         TimeSpan? currentSegmentFullBest)
     {
         int segment = CurrentSegmentIndex;
-        return ReckoningCalculator.PredictFinish(
+        return DeathPaceCalculator.PredictFinish(
             elapsed, segmentStartElapsed, currentSegmentFullBest,
             tracker.DiedThisSegment, tracker.CurrentMarker, tracker.CurrentVariant, tracker.CurrentArrival,
             tracker.CurrentHotArrival,

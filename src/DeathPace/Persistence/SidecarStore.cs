@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web.Script.Serialization;
-using LiveSplit.Reckoning.Engine;
+using DeathPace.Engine;
 
-namespace LiveSplit.Reckoning.Persistence;
+namespace DeathPace.Persistence;
 
 /// <summary>Sidecar JSON next to the splits file. Learned data is precious but
 /// replaceable: any load problem degrades to an empty (unlearned) store and a

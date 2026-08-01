@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 /// <summary>Learned marker→exit bests, keyed (segment, marker, variant).
 /// Pure data — no LiveSplit or WRAM types.</summary>

@@ -1,4 +1,4 @@
-namespace LiveSplit.Reckoning.Watchers;
+namespace DeathPace.Watchers;
 
 internal readonly record struct DetectorTick(bool Death, bool Checkpoint, bool Respawn)
 {

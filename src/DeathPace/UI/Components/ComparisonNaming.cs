@@ -4,7 +4,7 @@ using LiveSplit.Model.Comparisons;
 namespace LiveSplit.UI.Components;
 
 /// <summary>Label tables ported from LiveSplit's RunPrediction component (MIT)
-/// so Reckoning presents identically for every comparison.
+/// so Death Pace presents identically for every comparison.
 /// Deviation from stock (Andrew, 2026-07-31 live review): unmapped comparisons display their own name instead of "Current Pace (name)".</summary>
 internal static class ComparisonNaming
 {

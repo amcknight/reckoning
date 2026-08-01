@@ -1,10 +1,10 @@
 using System;
-using LiveSplit.Reckoning.Engine;
+using DeathPace.Engine;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
-public class ReckoningCalculatorTests
+public class DeathPaceCalculatorTests
 {
     private static TimeSpan S(double s) => TimeSpan.FromSeconds(s);
     private static Func<int, Variant, TimeSpan?> NoBests => (_, _) => null;
@@ -20,7 +20,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void DeathlessReturnsNull_StockFormulaApplies()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(100), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: false, currentMarker: 1, currentVariant: Variant.Hot,
             situationArrivalElapsed: null, hotArrivalAtCurrentMarker: null, markerBest: Bests((1, Variant.Hot, 10)));
@@ -30,7 +30,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void AfterDeathUsesLearnedBestAnchoredAtArrival()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(150), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: null, markerBest: Bests((1, Variant.Cold, 22)));
@@ -42,7 +42,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void AfterDeathClampsToElapsedWhenBehindLearnedPace()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(170), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: null, markerBest: Bests((1, Variant.Cold, 22)));
@@ -52,7 +52,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void PreRespawnAnchorsAtElapsedSoEstimateRises()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(145), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: null, hotArrivalAtCurrentMarker: null, markerBest: Bests((1, Variant.Cold, 22)));
@@ -62,7 +62,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void FallsBackToOtherVariantFlaggedUnlearned()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: null, markerBest: Bests((1, Variant.Hot, 18)));
@@ -74,7 +74,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void FallsBackToSegmentGoldWhenNoMarkerData()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(135), hotArrivalAtCurrentMarker: null, markerBest: NoBests);
@@ -86,7 +86,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void NoDataAtAllYieldsNullFinishUnlearned()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: null,
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(135), hotArrivalAtCurrentMarker: null, markerBest: NoBests);
@@ -100,7 +100,7 @@ public class ReckoningCalculatorTests
     {
         // No learned data at all; hot arrival at marker 0 IS the segment start.
         // Prior: replay the segment from the respawn -> anchor + gold.
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(145), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: S(90),
@@ -115,7 +115,7 @@ public class ReckoningCalculatorTests
     {
         // Reached marker 2 hot at 110 (20s into a 30s-gold segment): 10s of gold
         // remains from there; anchored at the cold arrival.
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(141), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 2, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: S(110),
@@ -128,7 +128,7 @@ public class ReckoningCalculatorTests
     public void SlowerThanGoldArrivalClampsThePriorRemainingToZero()
     {
         // Hot arrival 50s into a 30s gold: no future credit; finish = max(anchor, elapsed).
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(150), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(145), hotArrivalAtCurrentMarker: S(140),
@@ -139,7 +139,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void PreRespawnGoldPriorAnchorsAtElapsedSoItTicks()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(143), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: null, hotArrivalAtCurrentMarker: S(90),
@@ -151,7 +151,7 @@ public class ReckoningCalculatorTests
     public void NoHotArrivalFallsBackToSegmentStartGold()
     {
         // Unanchored resume (undo/skip): old last-rung behavior, SegmentGold source.
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(140), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 0, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(135), hotArrivalAtCurrentMarker: null,
@@ -163,7 +163,7 @@ public class ReckoningCalculatorTests
     [Fact]
     public void LearnedDataStillBeatsTheGoldPrior()
     {
-        var p = ReckoningCalculator.PredictFinish(
+        var p = DeathPaceCalculator.PredictFinish(
             elapsed: S(141), segmentStartElapsed: S(90), currentSegmentFullBest: S(30),
             diedThisSegment: true, currentMarker: 1, currentVariant: Variant.Cold,
             situationArrivalElapsed: S(140), hotArrivalAtCurrentMarker: S(100),

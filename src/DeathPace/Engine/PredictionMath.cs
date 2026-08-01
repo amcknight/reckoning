@@ -1,6 +1,6 @@
 using System;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 public readonly record struct ComposedPrediction(
     TimeSpan? StockValue,

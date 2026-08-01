@@ -1,7 +1,7 @@
-using LiveSplit.Reckoning.Watchers;
+using DeathPace.Watchers;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class SmwEventDetectorTests
 {

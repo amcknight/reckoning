@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 using System.Linq;
-using LiveSplit.Reckoning.Engine;
-using LiveSplit.Reckoning.Persistence;
+using DeathPace.Engine;
+using DeathPace.Persistence;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class SidecarStoreTests : IDisposable
 {

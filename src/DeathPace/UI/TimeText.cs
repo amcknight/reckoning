@@ -1,6 +1,6 @@
 using System;
 
-namespace LiveSplit.Reckoning.UI;
+namespace DeathPace.UI;
 
 /// <summary>Deterministic time formatting for the damage-hit overlay. Local
 /// rather than LiveSplit's TimeFormatters so the exact string is unit-pinned.</summary>

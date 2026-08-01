@@ -1,8 +1,8 @@
 using System;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
-public static class ReckoningCalculator
+public static class DeathPaceCalculator
 {
     /// <summary>Predicts when the current split will finish, given death state.
     /// Returns null while deathless: no adjustment — the stock Run Prediction

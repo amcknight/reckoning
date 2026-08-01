@@ -1,8 +1,8 @@
 using System;
-using LiveSplit.Reckoning.UI;
+using DeathPace.UI;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class TimeTextTests
 {

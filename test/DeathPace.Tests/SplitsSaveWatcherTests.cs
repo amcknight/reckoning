@@ -1,7 +1,7 @@
-using LiveSplit.Reckoning.Persistence;
+using DeathPace.Persistence;
 using Xunit;
 
-namespace LiveSplit.Reckoning.Tests;
+namespace DeathPace.Tests;
 
 public class SplitsSaveWatcherTests
 {

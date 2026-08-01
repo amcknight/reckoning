@@ -1,6 +1,6 @@
 using System;
 
-namespace LiveSplit.Reckoning.Engine;
+namespace DeathPace.Engine;
 
 /// <summary>Transient "damage number" for a death: appears at the death event,
 /// grows while time bleeds (death animation), freezes at respawn, then fades.
