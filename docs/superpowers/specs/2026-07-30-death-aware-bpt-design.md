@@ -1,5 +1,9 @@
 # Reckoning — Death-aware Best Possible Time (design)
 
+> **Renamed 2026-08-01:** the project this spec describes is now **Death Pace**
+> (repo `death_pace`, shipping `SMWDeathPace.dll`). Body text below predates the
+> rename and still says "Reckoning"; see `docs/superpowers/plans/2026-08-01-death-pace-rename.md`.
+
 ## Overview
 
 **Reckoning** is a LiveSplit layout component (C#) for SMW kaizo runs that

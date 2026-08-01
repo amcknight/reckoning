@@ -1,4 +1,4 @@
-# Reckoning
+# SMW Death Pace
 
 **Death-aware run prediction** for [LiveSplit](https://livesplit.org/) —
 a layout component for SMW kaizo runs. Point it at Best Segments and it is
@@ -9,15 +9,14 @@ completed in its comparison time — for Best Possible Time, your
 best-segment time. That assumption breaks the moment you die: you're back
 at a checkpoint, and the part of the segment you still have to replay
 can't be compressed below your best *from that checkpoint*.
-Reckoning watches deaths and checkpoint touches via emulator WRAM (through
+Death Pace watches deaths and checkpoint touches via emulator WRAM (through
 [snes_offsets](https://github.com/amcknight/snes_offsets)'s `SNES.dll`) and
 recomputes what finish time is actually still reachable from where death left
-you. The name is from *dead reckoning*: navigating forward from a known past
-position.
+you.
 
 ## Display
 
-Reckoning works like LiveSplit's stock **Run Prediction** component for any
+Death Pace works like LiveSplit's stock **Run Prediction** component for any
 comparison you pick — the label follows the comparison the way stock does
 ("Best Segments" → "Best Possible Time", "Current Comparison"/PB →
 "Current Pace", "Average Segments" → "Predicted Time", "Worst Segments" →
@@ -31,7 +30,7 @@ predicted finish for the *current split* is repriced from your learned
 recovery pace (hot or cold) at the checkpoint or segment start you're
 recovering from, which can raise the prediction above what stock alone would
 show. Reach a further checkpoint alive and pricing flips back to hot bests.
-With nothing learned for that checkpoint yet, Reckoning still prices the
+With nothing learned for that checkpoint yet, Death Pace still prices the
 death: it charges you the part of your segment gold you have to replay
 from where you respawned, shown in gray as provisional. While the segment
 stays deathless the death-aware term is zero by construction, so there's
@@ -46,14 +45,14 @@ nothing is drawn there at all, and a death the prediction fully absorbs
 (amount zero) draws nothing either rather than a meaningless `-0.0`.
 
 An unlearned estimate (no recorded time yet for the current checkpoint/
-variant, so Reckoning had to fall back toward a coarser estimate) renders in
+variant, so Death Pace had to fall back toward a coarser estimate) renders in
 a fixed gray rather than the normal text color, so it reads as provisional
 rather than as solid data.
 
 ## Settings
 
 Configure via the component's settings in LiveSplit's layout editor — the
-surface is a full clone of stock Run Prediction's, plus one Reckoning-only
+surface is a full clone of stock Run Prediction's, plus one Death Pace-only
 toggle:
 
 - **Comparison** — which comparison to predict against (default: Current
@@ -65,18 +64,18 @@ toggle:
 - **Accuracy** — Seconds, Tenths, Hundredths, or Milliseconds (default:
   Seconds).
 - **Display 2 rows** — stock's compact/expanded layout toggle.
-- **Show connection status dot** — Reckoning-only; toggles the status dot
+- **Show connection status dot** — Death Pace-only; toggles the status dot
   (default: on).
 
 ## Install
 
-Download the release zip and copy **both** `Reckoning.dll` and `SNES.dll`
-into your `LiveSplit/Components/` folder, then add "Reckoning" (Information
+Download the release zip and copy **both** `SMWDeathPace.dll` and `SNES.dll`
+into your `LiveSplit/Components/` folder, then add "SMW Death Pace" (Information
 category) to your layout in LiveSplit's layout editor.
 
 ## Supported emulators
 
-Reckoning attaches automatically to a running emulator process — no
+Death Pace attaches automatically to a running emulator process — no
 per-version configuration. Recognized process names: `snes9x`,
 `snes9x-x64`, `bsnes`, `retroarch`, `higan`, `snes9x-rr`, `mesen`,
 `emuhawk`, `ares`, `mednafen`. The status dot (see below) always shows
@@ -84,8 +83,8 @@ current connection health.
 
 ## Learned data (sidecar file)
 
-Reckoning learns checkpoint-to-exit times live as you run and persists them
-to a sidecar JSON file next to your splits file: `<splits>.lss.reckoning.json`.
+Death Pace learns checkpoint-to-exit times live as you run and persists them
+to a sidecar JSON file next to your splits file: `<splits>.lss.deathpace.json`.
 Bests are tracked per splits file, per segment, per marker (checkpoint index
 within the segment), and separately for the **hot** (reached alive) and
 **cold** (reached after respawning there) variants, since post-death times
@@ -95,7 +94,7 @@ The sidecar is written only when you save your splits file (Ctrl+S, or the
 save prompt on exit) — the same way LiveSplit only keeps golds you've saved.
 Splitting alone does not persist anything; closing LiveSplit without saving
 splits discards that session's learning. The sidecar is safe to delete at
-any time — Reckoning relearns from scratch on the next run and never crashes
+any time — Death Pace relearns from scratch on the next run and never crashes
 if it's missing or corrupt.
 
 ## Status dot
@@ -117,12 +116,12 @@ snes_offsets' `SNES.dll` connection states:
 
 ```
 pwsh -File scripts/fetch-livesplit-core.ps1
-dotnet build Reckoning.sln -c Release
+dotnet build DeathPace.sln -c Release
 ```
 
 The fetch script pulls `LiveSplit.Core.dll` and `UpdateManager.dll` into
-`lib/` (not checked in). `dotnet test test/LiveSplit.Reckoning.Tests` runs
-the test suite; the calc engine under `src/LiveSplit.Reckoning/Engine/` is
+`lib/` (not checked in). `dotnet test test/DeathPace.Tests` runs
+the test suite; the calc engine under `src/DeathPace/Engine/` is
 pure C# with no LiveSplit or WRAM dependency and is fully unit-tested.
 
 ## License

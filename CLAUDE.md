@@ -1,4 +1,4 @@
-# reckoning — project instructions
+# death_pace — project instructions
 
 Death-aware run prediction: a LiveSplit layout component for SMW kaizo that
 computes what finish time is *actually* still reachable given where death
@@ -33,8 +33,10 @@ live-testing guide is `docs/TESTING.md`.
 
 ## Conventions
 
-- C# LiveSplit component, project name `LiveSplit.Reckoning`, output
-  `Reckoning.dll`.
+- C# LiveSplit component, project name `DeathPace`, output
+  `SMWDeathPace.dll` (the `SMW` prefix is for Components-folder clumping
+  with `SMWCounters`; it appears only on the shipped artifact and the
+  LiveSplit menu entry, never in the repo name or namespaces).
 - Red-green TDD. The calc engine (marker model, hot/cold bests, the stock
   prediction formula, and the death-aware finish estimate) stays pure — no
   LiveSplit or WRAM types — and fully unit-tested.

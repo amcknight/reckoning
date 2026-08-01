@@ -1,7 +1,7 @@
-# Reckoning — live testing & iteration guide
+# SMW Death Pace — live testing & iteration guide
 
 Written at v1 wrap-up (2026-07-30), updated through the Run Prediction
-rebase and the 2026-07-31 priors/hit fixes. The unit suite (119 tests)
+rebase and the 2026-07-31 priors/hit fixes. The unit suite (121 tests)
 covers the calc engine, watcher semantics, persistence, and formatting.
 Andrew has now run this live once — that session produced the fixes in
 `docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md` — but the
@@ -12,7 +12,7 @@ live, so a full play session is still the first thing to do together.
 
 Fast inner loop (auto-deploy on every build):
 
-1. Create `src/LiveSplit.Reckoning/Reckoning.local.props` (git-ignored):
+1. Create `src/DeathPace/DeathPace.local.props` (git-ignored):
 
    ```xml
    <Project><PropertyGroup>
@@ -21,14 +21,14 @@ Fast inner loop (auto-deploy on every build):
    ```
 
 2. `pwsh -File scripts/fetch-livesplit-core.ps1` (once), then
-   `dotnet build Reckoning.sln -c Release`. The post-build target copies
-   `Reckoning.dll` + `SNES.dll` into the Components dir (warns instead of
+   `dotnet build DeathPace.sln -c Release`. The post-build target copies
+   `SMWDeathPace.dll` + `SNES.dll` into the Components dir (warns instead of
    failing if LiveSplit has them locked — restart LiveSplit to pick up a
    rebuild).
-3. In LiveSplit: Edit Layout → add "Reckoning" (Information category). Its
+3. In LiveSplit: Edit Layout → add "SMW Death Pace" (Information category). Its
    settings are a full clone of stock Run Prediction's (Comparison, text/time
    color overrides, background + gradient, Accuracy, Display 2 rows) plus a
-   Reckoning-only "Show connection status dot" toggle. For comparison, also
+   Death Pace-only "Show connection status dot" toggle. For comparison, also
    add a stock "Run Prediction" component set to the same Comparison.
 
 Prereqs: a supported emulator (`snes9x`, `snes9x-x64`, `bsnes`, `retroarch`,
@@ -40,10 +40,10 @@ in-memory only and is discarded on close).
 
 ## Quick play session
 
-Work through in order, stock Run Prediction alongside Reckoning on the same
+Work through in order, stock Run Prediction alongside Death Pace on the same
 comparison.
 
-1. **Deathless == stock.** With best segments present, Reckoning's value
+1. **Deathless == stock.** With best segments present, Death Pace's value
    matches the stock component digit-for-digit the whole run. Switch
    Comparison on both (Best Segments / Current Comparison / Average / Worst)
    — the name label relabels identically on both ("Best Possible Time",
@@ -53,7 +53,7 @@ comparison.
    color, background + gradient, Accuracy (Seconds/Tenths/Hundredths/
    Milliseconds), Display 2 rows — each should behave exactly like the same
    setting on stock Run Prediction. "Show connection status dot" is the one
-   Reckoning-only extra.
+   Death Pace-only extra.
 3. **First death, unlearned.** Die before touching any checkpoint: the value
    turns gray and prices the segment gold from the respawn ("replay from
    respawn"), while a red damage number appears at the death and ticks 1:1
@@ -66,7 +66,7 @@ comparison.
    step 4).
 4. **Learn it, then reuse it.** Touch a checkpoint, die, respawn, finish the
    segment, split, then **save the splits (Ctrl+S)**. Open
-   `<splits>.lss.reckoning.json`: expect a hot AND a cold entry for that
+   `<splits>.lss.deathpace.json`: expect a hot AND a cold entry for that
    marker with plausible `bestMs`/`attempts`. Die at the same checkpoint
    again: the value now uses the learned cold best (no longer gray). The red
    hit reappears at the death and ticks 1:1 through the animation the same
@@ -97,7 +97,7 @@ comparison.
 
 ## Reading the sidecar
 
-`<splits>.lss.reckoning.json` (next to the splits file) — `segments[].markers[]`
+`<splits>.lss.deathpace.json` (next to the splits file) — `segments[].markers[]`
 of `{marker, variant: hot|cold, bestMs, attempts}`. `attempts` counts
 completed observations (real splits only). Best debugging surface: if the
 display looks wrong, check whether the learned data or the math is at
@@ -108,9 +108,9 @@ fault. Only written when you save splits (see step 5 above).
 | Concern | File |
 |---|---|
 | Stock Run Prediction formula + death-aware live delta | `Engine/PredictionMath.cs` |
-| Per-situation death prediction (current split's finish only) | `Engine/ReckoningCalculator.cs` |
+| Per-situation death prediction (current split's finish only) | `Engine/DeathPaceCalculator.cs` |
 | Marker/variant state, observations | `Engine/SegmentTracker.cs` |
-| Split/undo/skip/reset orchestration, undo journal | `Engine/ReckoningModel.cs` |
+| Split/undo/skip/reset orchestration, undo journal | `Engine/DeathPaceModel.cs` |
 | Learned bests store | `Engine/BestsStore.cs` |
 | Damage-hit lifecycle (grow/freeze/fade) | `Engine/DamageHit.cs` |
 | WRAM addresses & value constants | `Watchers/SmwAddresses.cs` |
@@ -120,7 +120,7 @@ fault. Only written when you save splits (see step 5 above).
 | Save-on-splits-save watcher | `Persistence/SplitsSaveWatcher.cs` |
 | Stock comparison labels ("Best Possible Time" etc.) | `UI/Components/ComparisonNaming.cs` |
 | Damage-number text formatting | `UI/TimeText.cs` |
-| LiveSplit wiring, rendering, settings | `UI/Components/ReckoningComponent.cs`, `…Settings.cs`, `…Factory.cs` |
+| LiveSplit wiring, rendering, settings | `UI/Components/DeathPaceComponent.cs`, `…Settings.cs`, `…Factory.cs` |
 
 Design lineage: spec `docs/superpowers/specs/2026-07-30-death-aware-bpt-design.md`
 → v1 plan `docs/superpowers/plans/2026-07-30-death-aware-bpt.md` → rebase plan
@@ -132,7 +132,7 @@ persistence) →
 review: unmapped comparisons show their own name, the hit freezes one
 sample after respawn, and unlearned markers get a gold prior). Engine stays
 pure — no LiveSplit/WRAM types — so calc changes are always unit-testable
-first: `dotnet test test/LiveSplit.Reckoning.Tests`.
+first: `dotnet test test/DeathPace.Tests`.
 
 ## Known deferred follow-ups
 
@@ -156,7 +156,7 @@ Real but non-blocking; candidates for the first iteration pass:
    releases; read from assembly instead.
 6. **Spec's "run name/category fallback identity"** for the sidecar is
    written but never used for validation on load — conscious cut.
-7. **`ComputePrediction`'s backward segment-start scan** (`ReckoningComponent.cs`)
+7. **`ComputePrediction`'s backward segment-start scan** (`DeathPaceComponent.cs`)
    contains real logic living untested in the shell — extract into a
    testable static helper.
 8. Test polish: strengthen `DetachDropsEdgesAndLatches`'s final assert
