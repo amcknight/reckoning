@@ -10,7 +10,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\LiveSplit.Reckoning\LiveSplit.Reckoning.csproj" />
+    <ProjectReference Include="..\..\src\DeathPace\DeathPace.csproj" />
   </ItemGroup>
   <!-- Private=true: tests need these present at runtime (LiveSplit isn't hosting us). -->
   <ItemGroup Condition="'$(LsSrcPath)' == ''">

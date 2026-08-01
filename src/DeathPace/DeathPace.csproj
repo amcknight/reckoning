@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net481</TargetFramework>
-    <RootNamespace>LiveSplit.Reckoning</RootNamespace>
-    <AssemblyName>Reckoning</AssemblyName>
+    <RootNamespace>DeathPace</RootNamespace>
+    <AssemblyName>SMWDeathPace</AssemblyName>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
@@ -27,7 +27,7 @@
     </Reference>
   </ItemGroup>
 
-  <!-- SNES.dll: Private=true so it lands in output and ships beside Reckoning.dll. -->
+  <!-- SNES.dll: Private=true so it lands in output and ships beside SMWDeathPace.dll. -->
   <ItemGroup Condition="'$(SnesSrcPath)' != ''">
     <ProjectReference Include="$(SnesSrcPath)\src\SNES\SNES.csproj" />
   </ItemGroup>
@@ -43,9 +43,9 @@
     <Reference Include="System.Web.Extensions" />
   </ItemGroup>
 
-  <!-- Deploy to a live LiveSplit install when Reckoning.local.props defines ComponentsPath.
+  <!-- Deploy to a live LiveSplit install when DeathPace.local.props defines ComponentsPath.
        ContinueOnError: LiveSplit locks loaded DLLs; warn instead of failing the build. -->
-  <Import Project="Reckoning.local.props" Condition="Exists('Reckoning.local.props')" />
+  <Import Project="DeathPace.local.props" Condition="Exists('DeathPace.local.props')" />
   <Target Name="CopyToLiveSplitComponents" AfterTargets="Build" Condition="Exists('$(ComponentsPath)')">
     <ItemGroup>
       <_DeployPair Include="$(TargetPath);$(TargetDir)SNES.dll" />
