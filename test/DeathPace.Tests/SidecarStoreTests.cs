@@ -9,7 +9,7 @@ namespace DeathPace.Tests;
 
 public class SidecarStoreTests : IDisposable
 {
-    private readonly string dir = Path.Combine(Path.GetTempPath(), "reckoning-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string dir = Path.Combine(Path.GetTempPath(), "deathpace-tests-" + Guid.NewGuid().ToString("N"));
 
     public SidecarStoreTests() => Directory.CreateDirectory(dir);
     public void Dispose() => Directory.Delete(dir, true);
