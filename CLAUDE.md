@@ -10,7 +10,9 @@ the implementation departs from its literal formulas). Plan lineage: v1
 onto stock Run Prediction semantics
 `docs/superpowers/plans/2026-07-30-run-prediction-rebase.md` →
 first-live-review fixes
-`docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md`. The
+`docs/superpowers/plans/2026-07-31-priors-and-hit-fixes.md` → rename to
+Death Pace `docs/superpowers/plans/2026-08-01-death-pace-rename.md`
+(carries unexecuted out-of-repo handoff checklist). The
 live-testing guide is `docs/TESTING.md`.
 
 ## Sibling repos (read-only reference — never edit from here)
